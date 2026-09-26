@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -55,6 +56,15 @@ def test_real_mysql_readiness_restart_and_outage(monkeypatch):
             assert version.startswith("8.4.")
             assert database == "cost_inventory_test"
             assert user.startswith("test_app@")
+        result = subprocess.run(
+            [sys.executable, "-m", "alembic", "current"],
+            cwd=ROOT / "backend",
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+        assert result.returncode == 0, "alembic current failed (details withheld)"
+        print("alembic current connected successfully; no revisions in stage one")
         with TestClient(create_app()) as client:
             assert client.get("/health/ready").status_code == 200
             compose("restart", "db")

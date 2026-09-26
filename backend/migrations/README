@@ -1,1 +1,8 @@
-Generic single-database configuration.
+Schema changes are managed by Alembic, using app.config and app.db.Base.metadata.
+Stage one intentionally contains no revisions or business tables.
+From backend with a reachable DB: .venv/bin/python -m alembic current
+An empty current revision is expected. This command connects; it does not apply DDL.
+Future changes: define models, import their metadata, create/review a migration,
+then apply it with alembic upgrade head after reviewing the data impact.
+Never use Base.metadata.create_all() as a replacement for migrations.
+Do not store DB URLs or credentials in alembic.ini or revision files.

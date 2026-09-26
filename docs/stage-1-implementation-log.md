@@ -625,3 +625,14 @@ git status --short --branch
 - 官方來源／日期：2026-09-27，https://docs.docker.com/reference/compose-file/services/ 、https://dev.mysql.com/doc/refman/8.4/en/mysql-command-options.html 、https://dev.mysql.com/doc/refman/8.4/en/environment-variables.html 。
 - 任務表：observability 已驗收；MySQL 隔離程式完成、CI/本機待验收；其餘未開始。
 - 補充相依：`pip install 'PyMySQL[rsa]==1.2.3'` 支援 MySQL 8.4 預設 caching_sha2_password 首次認證；新增固定 cffi 2.1.1、cryptography 50.0.1、pycparser 3.0，實際安裝成功。這些不是使用者帳密或 auth 業務功能。
+
+## Step 16：Alembic 設定與空 metadata 接線
+- 日期／分支／起點：2026-09-27，chore/alembic-config；PR #6 三項 CI 通過（36256317004），merge 5346f10，main 同步。
+- 目的／方法：API 與 Alembic 共用 Settings URL 及 Base.metadata，URL 直接交 SQLAlchemy 避免 ini 百分號插值與明文憑證。保留 versions 目錄但不造空 revision、不 create_all。
+- 指令：backend `pytest -q`、`alembic heads`、全 Ruff；integration 加入 subprocess `python -m alembic current`，沿用隔離 DB 環境，成功才繼續故障演練。
+- 修改：app/db.py 的 DeclarativeBase；migrations/env.py/README/versions/.gitkeep；alembic.ini 移除模板 URL 並使用 %(here)s 路徑；tests/test_migrations.py、integration test。
+- 結果：本機 15 passed、1 skipped、1 warning；13 files Ruff 通過；alembic heads exit 0 且無 revision。PR #6 的真實 MySQL CI 已完成 app SELECT 1、重啟持久性、outage/recovery；本機 Docker 仍無法執行。
+- 問題／風險：alembic current 的本機真實 DB 證據待 Docker；遠端本 PR 將驗證。連線 SQLAlchemyError 轉為不帶原始資料的 CommandError；不印 credentials。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/6 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36256317004
+- 官方來源／日期：2026-09-27，https://alembic.sqlalchemy.org/en/latest/tutorial.html 。
+- 任務表：MySQL CI 已驗收／本機仍待驗收；Alembic 本機無 DB 檢查完成，真實連線待 CI；前端/auth/文件/clean clone 未開始。

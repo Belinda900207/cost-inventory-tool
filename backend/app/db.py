@@ -3,8 +3,14 @@ from functools import lru_cache
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import DeclarativeBase
 
 from app.config import get_settings
+
+
+class Base(DeclarativeBase):
+    """Future mapped models share this metadata; stage one has no tables."""
+
 
 DatabaseCheck = Callable[[], None]
 
