@@ -636,3 +636,17 @@ git status --short --branch
 - 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/6 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36256317004
 - 官方來源／日期：2026-09-27，https://alembic.sqlalchemy.org/en/latest/tutorial.html 。
 - 任務表：MySQL CI 已驗收／本機仍待驗收；Alembic 本機無 DB 檢查完成，真實連線待 CI；前端/auth/文件/clean clone 未開始。
+
+## Step 17：React 服務狀態頁與前端測試
+- 日期／分支／起點：2026-09-27，feat/frontend-health；PR #7 三項 CI 36256488044 通過，merge 9a4f105 後同步 main。
+- 目的：以真實相對 API 取代 counter；顯示 loading/成功/DB unavailable/backend disconnected/未知狀態與重試。
+- 方法：api/client 集中 fetch、10 秒 timeout、AbortSignal、JSON 合約驗證；元件卸載取消請求；Vite /api proxy 保留、target 改 127.0.0.1 避免 IPv6 localhost 差異。Vitest/jsdom/Testing Library 驗證使用者可見狀態，CI 新增 npm test。
+- 指令：`npm view` 查版本；frontend `npm install --save-dev --save-exact vitest@5.0.2 @testing-library/react@16.3.3 jsdom@30.1.1`、`npm run lint && npm run typecheck && npm test && npm run build`。
+- 修改：frontend App/CSS/index、api/client、App.test、vitest.config、tsconfig.node、package/lock、vite config；workflow 加測試。
+- 實際結果：安裝 71 packages，0 vulnerabilities；7 tests passed（載入、成功相對 URL、DB 失敗/重試恢復、network 失敗、非 JSON、合約錯誤、卸載取消）；lint/tsc/build 通過，build 18 modules。
+- 失敗紀錄：第一次誤在 repository root 跑 npm，ENOENT 因 root 無 package.json；改 frontend 工作目錄後成功，未改專案結構。
+- 風險：目前元件測試 mock network，尚未代替瀏覽器→Vite→API→MySQL 最終驗收；預期 production 需同源反向代理，CD 不在本階段。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/7 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36256488044
+- 官方來源／日期：2026-09-27，https://vitest.dev/config/environmentoptions 、https://playwright.dev/docs/test-webserver （用於規劃下一步 browser 驗收）。
+- 任務表：Alembic CI 已驗收；前端本機完成/遠端待驗收；auth、交接文件、乾淨 clone 未完成。
+- 信心評估：對「已實作 API/狀態頁邊界正確」信心 85/100，依據 API 15 tests、前端 7 tests 與前次真實 DB CI；扣分為 browser end-to-end 與本機 Docker 缺證據。這是信心而非實作完成度；下次以 clean clone/browser 證據提升。
