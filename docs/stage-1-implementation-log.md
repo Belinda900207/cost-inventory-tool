@@ -561,3 +561,17 @@ git status --short --branch
 - 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/1
 - 官方來源：本步無新增技術引用，依實際 CLI 結果。
 - 狀態：文件保存進行中；下一步 CI 基線。第一階段仍進行中。
+
+## Step 11：CI 基線與版本固定
+- 日期／分支：2026-09-27，ci/quality-gates；文件 PR #2 合併 bb6b1b6 後由乾淨 main 開分支。
+- 目的：先讓 PR/main push 自動跑後端 tests Ruff/pytest 與前端 lint/typecheck/build，再擴到全後端。
+- 方法：GitHub Actions 是每次推送觸發的獨立執行環境；以固定 Python 3.14.4、Node 24.21.0、Ruff 0.16.8 與既有 lockfile 降低漂移。保留既有 Oxlint，不並行引進重複 ESLint；tsc 負責型別檢查。
+- 指令：`ruff check backend`、`ruff format --check backend` 確認既有 4 lint / 2 format 問題；`npm ci` 依 lockfile 安裝；pytest 與前端 checks 待下步實測。
+- 修改：.github/workflows/quality.yml、backend/requirements-dev.txt、backend/pyproject.toml、frontend/package.json；明確專案 Ruff 規則，不依賴家目錄設定。
+- 結果：文件 PR 已合併，CI 設定已建立，尚未宣稱遠端綠燈。
+- 風險：保留 Starlette/httpx deprecation warning；全後端 Ruff 將於本 PR 修正後擴大。
+- 證據：https://github.com/Belinda900207/cost-inventory-tool/pull/2
+- 官方來源：2026-09-27 查閱 GitHub Actions 與 Ruff/Oxlint 官方搜尋；最終可追蹤依據為 workflow 及實跑結果。
+- 任務狀態：文件保存已驗收；CI 進行中；其餘任務維持未驗收。
+- CI 故障演練：暫時加入 test_ci_gate.py 的故意失敗，要求遠端 pytest 紅燈；修正 commit 移除此檔後才可合併，故障版本不得進 main。
+- 官方依據（2026-09-27）：https://docs.github.com/en/actions/tutorials/build-and-test-code/python 、https://docs.astral.sh/ruff/configuration/ 、https://oxc.rs/docs/guide/usage/linter 。
