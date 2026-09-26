@@ -32,7 +32,16 @@ def test_health_safe_failure(health_client: tuple[TestClient, Mock], path: str) 
     check.side_effect = RuntimeError("private database connection detail")
     response = client.get(path)
     assert response.status_code == 503
-    assert response.json() == {"status": "unhealthy", "database": "unavailable"}
+    if path == "/health":
+        assert response.json() == {"status": "unhealthy", "database": "unavailable"}
+    else:
+        assert response.json() == {
+            "error": {
+                "code": "database_unavailable",
+                "message": "Database unavailable",
+                "request_id": response.headers["x-request-id"],
+            }
+        }
     assert "private" not in response.text
     check.assert_called_once_with()
 

@@ -599,3 +599,15 @@ git status --short --branch
 - 追蹤：CI 基線 https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36255812580 ；本主題 PR 建立後於驗收表彙整。
 - 官方來源／日期：2026-09-27，https://fastapi.tiangolo.com/advanced/testing-dependencies/ 、https://docs.sqlalchemy.org/en/20/faq/connections.html 、https://starlette.dev/testclient/ 。
 - 任務表：CI 基線已驗收（integration/frontend tests 待擴充）；health 本機已驗證、遠端待驗收；Docker 仍不可用；其他未開始。
+
+## Step 14：安全 request ID、結構化 log 與 error envelope
+- 日期／分支／起點：2026-09-27，feat/api-observability；PR #4 CI 36255985191 全綠，合併 d830837 後同步 main。
+- 目的與方法：middleware 為 HTTP request 建立上下文；只接受單一 1–64 字元英數/底線/連字號 ID，其餘重生 UUID。response header 與 error body 共用 ID；一般 HTTP/validation/500 回安全 envelope。legacy /health 為相容性例外，body 不變。
+- 指令：backend `pytest -q`、`ruff check .`、`ruff format --check .`；Git 指定路徑 add，列 staged filenames、diff check、秘密模式與完整 diff 審查後 commit/push。
+- 修改：app/observability.py、main.py、health.py；tests/test_observability.py 與健康失敗斷言。
+- 結果：14 passed / 1 已知 warning；全 lint/format 通過（10 files）。涵蓋非法/過長/重複 ID、ID 唯一、404/405/422/500、安全 log、舊 health、新 ready。
+- 安全邊界：log 只含時間、level、service、environment、request_id、method、路由模板 path、status、duration_ms、固定 message；未知路徑用 <unmatched>。不記 query、body、例外 traceback 或完整 DB URL。啟動時需關閉 Uvicorn access log，README 將提供指令。
+- 風險：此階段無 streaming API；若未來加入串流，需補 response 開始後例外策略。ENVIRONMENT 從程序環境讀取，預設 development。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/4 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36255985191
+- 官方來源：沿用 FastAPI/Starlette 依賴文件；本步合約由本專案測試定義。
+- 任務表：health 已驗收單元/API；observability 本機完成、CI 待驗收；DB integration 未開始；第一階段仍進行中。
