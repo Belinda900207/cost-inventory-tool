@@ -1,20 +1,18 @@
+name: cost-inventory-test
 services:
   db:
     image: mysql:8.4
-    restart: unless-stopped
-    env_file:
-      - .env
+    env_file: .env.test
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mysql_test_data:/var/lib/mysql
       - ./scripts/mysql-healthcheck.sh:/usr/local/bin/app-healthcheck:ro
     healthcheck:
       test: ["CMD", "bash", "/usr/local/bin/app-healthcheck"]
-      interval: 5s
+      interval: 3s
       timeout: 5s
-      retries: 20
+      retries: 40
       start_period: 20s
-
 volumes:
-  mysql_data:
+  mysql_test_data:

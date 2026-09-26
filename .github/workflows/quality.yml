@@ -19,8 +19,8 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements*.txt
       - run: python -m pip install -r requirements-dev.txt
-      - run: python -m ruff check .
-      - run: python -m ruff format --check .
+      - run: python -m ruff check . ../scripts
+      - run: python -m ruff format --check . ../scripts
       - run: python -m pytest -q
   frontend:
     runs-on: ubuntu-24.04
@@ -38,3 +38,22 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+  mysql-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.4'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: python -m pip install -r backend/requirements-dev.txt
+      - run: python scripts/init_test_env.py
+      - run: docker compose --env-file .env.test -p cost-inventory-test -f compose.test.yaml up -d --wait --wait-timeout 150
+      - run: python -m pytest -q -s tests/integration
+        working-directory: backend
+        env:
+          RUN_MYSQL_INTEGRATION: '1'
+      - if: always()
+        run: docker compose --env-file .env.test -p cost-inventory-test -f compose.test.yaml stop
