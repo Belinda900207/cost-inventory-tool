@@ -575,3 +575,15 @@ git status --short --branch
 - 任務狀態：文件保存已驗收；CI 進行中；其餘任務維持未驗收。
 - CI 故障演練：暫時加入 test_ci_gate.py 的故意失敗，要求遠端 pytest 紅燈；修正 commit 移除此檔後才可合併，故障版本不得進 main。
 - 官方依據（2026-09-27）：https://docs.github.com/en/actions/tutorials/build-and-test-code/python 、https://docs.astral.sh/ruff/configuration/ 、https://oxc.rs/docs/guide/usage/linter 。
+
+## Step 12：驗證 CI 紅燈並擴大全後端門檻
+- 日期／分支：2026-09-27，ci/quality-gates；PR #3 初版含明確故障探針。
+- 目的與方法：先證明遠端 pytest 會拒絕失敗，再移除演練；修正 import/format，保留 /health 對任意 DB 例外安全 503 的原合約，以單行 BLE001 註解說明例外邊界。
+- 指令：`gh pr checks 3` 查 checks；`gh run view 36255713755 --log-failed` 核對失敗原因；`ruff check backend --fix` 修 import；`ruff format backend` 修格式；backend `pytest -q tests/test_health.py`、全 Ruff；frontend `npm ci && npm run lint && npm run typecheck && npm run build`。
+- 修改：app/config.py、app/db.py、app/main.py、migrations/env.py 只整理既有 lint/format；workflow 改檢查全 backend；移除本 PR 新增的故障 test_ci_gate.py。
+- 本機結果：2 passed / 1 Starlette warning；全 Ruff 通過（含探針 7 files）；前端 npm ci 0 vulnerabilities、lint/typecheck/build 通過。
+- 遠端結果：初次 run 36255713755 backend fail、frontend pass，修正後將重新驗證，不把本機結果當 CI。
+- 風險：BLE001 例外僅 legacy health 邊界；後續拆分 router 時維持安全錯誤。CI 紅燈並不自動代表 GitHub branch protection 已配置，合併仍須逐次核對 checks。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/3 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36255713755
+- 官方依據：沿用 Step 11。
+- 狀態：CI 待修正後驗收；下一步後端健康 API。
