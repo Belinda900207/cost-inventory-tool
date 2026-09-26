@@ -611,3 +611,17 @@ git status --short --branch
 - 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/4 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36255985191
 - 官方來源：沿用 FastAPI/Starlette 依賴文件；本步合約由本專案測試定義。
 - 任務表：health 已驗收單元/API；observability 本機完成、CI 待驗收；DB integration 未開始；第一階段仍進行中。
+
+## Step 15：隔離 MySQL 與安全 healthcheck
+- 日期／分支／起點：2026-09-27，chore/mysql-testing；PR #5 CI 36256128550 通過，合併 7d06d90 後開始。
+- 目的：開發與測試完全分離；真實 MySQL SELECT 1、重啟與故障恢復由 CI 驗證。
+- 方法：獨立 compose.test.yaml 固定專案 cost-inventory-test、3307、test_app、cost_inventory_test、獨立 named volume；測試啟用旗標 RUN_MYSQL_INTEGRATION=1 並 assert 隔離設定，僅此 project 可 stop/restart。以 @@server_uuid 重啟不變驗證 datadir 持久性，不建立業務表或測試表。
+- 指令：`python3 scripts/init_test_env.py` 以隨機密碼建立 mode 0600 .env.test，O_EXCL 避免覆寫；`bash -n scripts/mysql-healthcheck.sh` 語法檢查；backend pytest 與 Ruff。`docker version` 沙箱內外均仍顯示 WSL 未整合，使用者回覆 ok 後已重驗，未假定修好。
+- 修改：compose.yaml 只綁 localhost 與改 app user healthcheck；新增測試 compose、healthcheck/init scripts、integration test；CI 新增 mysql-integration job 與 scripts Ruff。
+- 安全：healthcheck 以 umask 077 的一次性 client option file 傳密碼，shell builtin 轉義反斜線/引號/換行；不以 -p 密碼 argv 或 deprecated MYSQL_PWD 傳遞，退出只清理自己建立的暫存檔。未更動 .env 或現有 volume。
+- 結果：本機 14 passed / 1 skipped（integration opt-in）/ 1 warning；Ruff 12 files 通過，shell 語法通過；真實 DB 待 CI，本機 Docker 阻塞仍保留。
+- 風險：MySQL image 固定 8.4 系列而非 digest，修補版會更新；volume 不刪除。測試 DB 重啟/中斷不代表已重啟使用者開發 DB。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/5
+- 官方來源／日期：2026-09-27，https://docs.docker.com/reference/compose-file/services/ 、https://dev.mysql.com/doc/refman/8.4/en/mysql-command-options.html 、https://dev.mysql.com/doc/refman/8.4/en/environment-variables.html 。
+- 任務表：observability 已驗收；MySQL 隔離程式完成、CI/本機待验收；其餘未開始。
+- 補充相依：`pip install 'PyMySQL[rsa]==1.2.3'` 支援 MySQL 8.4 預設 caching_sha2_password 首次認證；新增固定 cffi 2.1.1、cryptography 50.0.1、pycparser 3.0，實際安裝成功。這些不是使用者帳密或 auth 業務功能。
