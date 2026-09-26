@@ -650,3 +650,17 @@ git status --short --branch
 - 官方來源／日期：2026-09-27，https://vitest.dev/config/environmentoptions 、https://playwright.dev/docs/test-webserver （用於規劃下一步 browser 驗收）。
 - 任務表：Alembic CI 已驗收；前端本機完成/遠端待驗收；auth、交接文件、乾淨 clone 未完成。
 - 信心評估：對「已實作 API/狀態頁邊界正確」信心 85/100，依據 API 15 tests、前端 7 tests 與前次真實 DB CI；扣分為 browser end-to-end 與本機 Docker 缺證據。這是信心而非實作完成度；下次以 clean clone/browser 證據提升。
+
+## Step 18：Auth 模組介面與拒絕邊界
+- 日期／分支／起點：2026-09-27，chore/auth-skeleton；PR #8 CI 36256692612 全綠，merge c651bae 後 main 同步。
+- 目的：只預留 schema/service/dependency/router 與前端型別，不決定身分來源或 session 儲存。
+- 方法：Protocol 定義能力而無實作；未配置 service 明確 501；空 router 不掛 login/me，實際 404。LoginRequest 的 password 使用 SecretStr。auth-contract 記錄擬議合約與本人待決策事項。
+- 指令：backend pytest/Ruff；frontend lint/typecheck/test/build；Git 精確 stage/diff/秘密模式核對。
+- 修改：backend/app/auth 模組、main router、auth boundary tests；frontend/features/auth/contracts、vite rewrite；docs/auth-contract.md。
+- 結果：本機 backend 18 passed / 1 skipped / 1 warning，Ruff 19 files 通過；frontend 7 tests、lint/tsc/build 通過。
+- 修正發現：原 Vite rewrite 刪除所有 /api，會把未來 /api/v1/auth 錯轉 /v1/auth；改為只移除 health 的開發 proxy 前綴，業務 /api/v1 保留。
+- 風險：Principal 只是 DTO，無 users table、無假帳號、無 JWT/localStorage。身分驗證尚未實作，這是本階段要求的邊界。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/8 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36256692612
+- 官方來源：沿用 FastAPI Depends 文件；未新增外部認證方案。
+- 任務表：前端已通過 CI；auth 本機完成/遠端待驗收；文件與最終驗收未完成。
+- 後续順序調整：先做 browser 驗收工具 PR，再整理 README／交接，讓 README 引用已實跑的命令；最後 clean clone 與 main 驗收單獨補證據。
