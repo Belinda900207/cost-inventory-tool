@@ -1,0 +1,563 @@
+# 第一階段實作紀錄
+
+本輪日期：2026-09-24。第一階段目標：可重建、可測試、可協作的工程骨架，不加入業務資料表或正式 auth。
+目前僅接手 `test/health-checks`；第一階段仍進行中，不能宣稱完成。
+
+## Step 00：接手與安全稽核
+
+### 目的
+核對真實狀態，保留使用者修改，限定本分支只改善既有 health 測試。
+
+### 執行前狀態
+- 使用者提供、待驗證：GitHub default branch 已為 main、先前 MySQL/前後端啟動成功、pytest 2 passed / 1 warning、前端 lint/build 通過。
+- 初次讀取附件前只簡述讀取規格，尚未取得逐步規則；曾執行 `pwd`、初步 `rg --files` 及 `cat` 使用者附件，未修改檔案。
+
+### 計畫
+唯讀核對 Git、目錄、設定、工具，建立缺口表。只新增本紀錄，不改功能、不啟停服務、不連 DB。
+
+### 執行指令
+```bash
+pwd
+git status --short --branch
+git branch -vv
+git diff
+git diff --cached
+git ls-files
+rg --files --hidden -g '!.git/**' -g '!**/node_modules/**' -g '!**/.venv/**' -g '!**/dist/**' -g '!**/.env' -g '!**/.env.*' -g '!**/__pycache__/**'
+git --version
+node --version
+npm --version
+python3 --version
+backend/.venv/bin/python --version
+docker --version
+docker compose version
+docker compose ps
+git symbolic-ref refs/remotes/origin/HEAD
+backend/.venv/bin/python -m pip show fastapi starlette httpx httpx2 ruff pytest sqlalchemy alembic
+command -v ruff
+ls -la docs scripts .agents .codex
+git log -4 --oneline
+```
+另以 Python pathlib 讀取 `.gitignore`、`.env.example`、`.editorconfig`、`.nvmrc`、compose、backend requirements/app/Alembic、frontend package/Vite/App/Oxlint/tsconfig/README；搜尋 repository 與父路徑 AGENTS.md，未發現。使用 subprocess 執行 `git remote -v`，輸出前遮蔽 HTTPS userinfo；對根目錄、backend、frontend 的 `.env` 僅檢查存在與 `git check-ignore`，不讀 value。檢查 tracked 路徑是否含 `.env`、`.venv`、node_modules、dist。
+
+### 指令說明
+`--short --branch` 顯示精簡狀態與分支；`-vv` 顯示追蹤關係；`--cached` 檢查暫存修改。rg 排除套件、秘密及 Git 內部。`pip show` 只查已安裝版本，沒有安裝。`compose ps` 只查容器狀態。無遠端 Git 讀寫；官方文件查閱會接觸公開網站。
+
+### 修改檔案
+- `docs/stage-1-implementation-log.md`：新增本次稽核與逐步紀錄。
+- `backend/tests/test_health.py`：使用者既有修改，這一步未變更。
+
+### 實際結果與證據
+- Git/read wrapper commands exit 0；注意多命令最後 exit 0 不代表每個子指令成功。
+- 路徑 `/home/gunter/projects/cost-inventory-tool`，不在 `/mnt/c`。
+- 分支 `test/health-checks`，HEAD `4853dbc`，無 upstream；本機 main 同 SHA 且追蹤 origin/main。
+- 僅 test_health.py 未提交；staged diff 空。兩個測試精確檢查成功 JSON/200 與安全失敗 JSON/503，mock 呼叫次數也有檢查，檔尾缺 newline。
+- origin 指向 GitHub Belinda900207/cost-inventory-tool；未連遠端核實 default branch。
+- Git 2.53.0、Node v24.21.0、npm 11.19.0、Python（系統/venv）3.14.4。
+- FastAPI 0.141.1、Starlette 1.7.0、httpx 0.28.1、pytest 9.1.1、SQLAlchemy 2.0.54、Alembic 1.20.0。
+- 無 pyproject/Ruff config，requirements 固定版本但未含 Ruff；PATH 也沒有 Ruff。前端有 package-lock，lint=oxlint，build=tsc -b && vite build，沒有 test script。
+- docs/scripts 為空，無根 README、.github/workflows。Alembic target_metadata=None，URL 為模板值。
+- `.env` 存在且被 ignore，backend/frontend .env 不存在但符合 ignore；未追蹤上述秘密/產物路徑。
+
+### 問題、Warning 與處理
+- Docker：`The command 'docker' could not be found in this WSL 2 distro.`，未取得版本/容器健康證據，不嘗試啟停或變更 Desktop 設定。
+- `fatal: ref refs/remotes/origin/HEAD is not a symbolic ref`；default branch 仍是使用者提供、待驗證。
+- pip cache 目錄不可寫而停用 cache；查詢仍完成。`Package(s) not found: httpx2, ruff`。不安裝、不改 lockfile。
+- compose healthcheck 以 `-p$$MYSQL_ROOT_PASSWORD` 傳密碼，有程序參數曝露風險；後續 DB 分支修正。
+- 前端使用 Oxlint 而非需求 ESLint，留待 CI 分支決策。
+- 已查閱 Starlette release-notes URL，但工具回 Internal Error，不能作為相容性/遷移依據。不更換 httpx。
+
+### 官方學習資源
+查閱日期均為 2026-09-24：
+- Git status：https://git-scm.com/docs/git-status — 區分工作樹與 staged 狀態。
+- Ruff linter：https://docs.astral.sh/ruff/linter/ — `ruff check` 檢查用途；本機尚未安裝。
+- Ruff formatter：https://docs.astral.sh/ruff/formatter/ — `format --check` 僅檢查，不自動改檔。
+
+### 狀態
+部分完成：repository 稽核完成，Docker/default branch 等環境與遠端證據仍缺。
+
+## P1-00～P1-11 稽核表（本輪，非最終驗收）
+
+| 任務 | 狀態 | 證據 | 缺口 | 建議分支 |
+| --- | --- | --- | --- | --- |
+| P1-00 環境 | 部分完成 | Linux 路徑、Git/Node/npm/Python 版本 | Docker 不可用、clean clone 未驗證 | test/stage-1-verification |
+| P1-01 協作 | 部分完成 | main 追蹤 origin/main、工作分支、ignore | default branch 遠端證據、PR template、完整 PR 流程 | ci/quality-gates |
+| P1-02 MySQL | 部分完成 | mysql:8.4、named volume、app_user 範例 | 健康狀態、實際 app user SELECT 1、測試隔離、healthcheck 秘密 | chore/mysql-testing |
+| P1-03 health | 部分完成 | summary route、DB layer SELECT 1 | live/ready/schema/router/dependency | feat/backend-health |
+| P1-04 測試 | 部分完成 | 本輪兩個精確 mock API tests 與 tests 範圍 Ruff 通過 | 全後端既有 Ruff 問題、integration/request ID/smoke | test/health-checks；後續測試分支 |
+| P1-05 Alembic | 部分完成 | migrations 模板與 ini | Settings/Base/metadata 接線與載入驗證 | chore/alembic-config |
+| P1-06 前端 | 部分完成 | React/TS/Vite、/api proxy | 狀態頁/API client/型別/測試，仍為 counter | feat/frontend-health |
+| P1-07 可觀測性 | 未完成 | 無對應模組 | request ID/logging/error envelope | feat/api-observability |
+| P1-08 auth 邊界 | 未完成 | 無 auth 模組 | 僅模組邊界與延後決策文件 | chore/auth-skeleton |
+| P1-09 CI | 未完成 | 無 .github | backend/frontend jobs、MySQL service、遠端實跑 | ci/quality-gates |
+| P1-10 文件 | 部分完成 | 本紀錄；frontend 模板 README | 根 README、architecture/decisions/workflow/AI/verification | docs/stage-1-handoff |
+| P1-11 最終驗收 | 未完成 | 無 clone/smoke 證據 | 全部重建與狀態切換驗證 | test/stage-1-verification |
+
+## 後續順序（尚未授權建分支）
+先完成本分支可用的驗證並呈現 diff，再等待使用者決定 Git 操作。
+沿用規格順序：backend-health → api-observability → mysql-testing → alembic-config → frontend-health → auth-skeleton → quality-gates → stage-1-handoff → stage-1-verification。
+health 先建立可替換 DB 邊界，observability 再補 ready 的一致錯誤格式；前兩支完成前 P1-03 不算完整驗收。每支開始前確認最新 main，分支切換/建立、套件安裝、lockfile、migration、Git 寫入均需先取得使用者同意。
+
+## Step 01：目前 health-check 分支驗證
+
+### 目的
+重驗使用者的精確測試與現有前端品質，不將功能擴充混入本分支。
+
+### 執行前狀態
+test/health-checks；使用者 test_health.py 修改保留。Step 00 文件已新增。Ruff 未安裝。
+
+### 計畫
+只補測試檔最後換行；跑 Ruff、pytest、現有前端 scripts、diff/秘密檢查。沒有套件安裝、lockfile 修改、Git 寫入或 DB 操作。
+
+### 執行指令
+```bash
+# repository root：透過 Python Path.read_bytes/write_bytes，僅在缺少時補一個 LF
+# backend 工作目錄
+.venv/bin/python -m ruff check .
+.venv/bin/python -m ruff format --check .
+.venv/bin/python -m pytest -q
+# frontend 工作目錄
+npm run lint && npm run build
+# repository root
+git diff --check
+git status --short --branch
+git diff --stat
+git check-ignore .env backend/.venv frontend/node_modules frontend/dist
+# pytest 卡住後的診斷
+ps -eo pid,ppid,etime,args | rg '[p]ytest|[p]ython -m pytest'
+# backend 工作目錄，沙箱內
+timeout -s INT -k 5s 20s .venv/bin/python -m pytest -vv -o faulthandler_timeout=10
+# backend 工作目錄，經 require_escalated 流程後於沙箱外
+timeout -s INT -k 5s 30s .venv/bin/python -m pytest -q
+```
+另外以 Python 掃描 `git ls-files -co --exclude-standard` 列出的檔案，檢查 private-key header、GitHub token、AWS access key、含帳密的 URL 模式；只印檔案及模式名稱，不印命中值。
+
+### 指令說明
+`python -m` 確保使用指定 venv。Ruff 沒有 `--fix`；format 帶 `--check`。pytest `-q` 精簡輸出，`-vv` 定位卡住的測試；faulthandler 10 秒印 stack。timeout 先送 INT，5 秒後仍未退出才終止本次測試程序。`npm run build` 實際先 `tsc -b` 再 Vite build。測試和 build 可產生已忽略快取/產物。
+
+### 修改檔案
+- `backend/tests/test_health.py`：本輪僅補最後 newline；兩個測試邏輯全部為使用者既有變更。
+- `docs/stage-1-implementation-log.md`：即時補上結果、風險、後續交接。
+- 未新增刪除其他 source、修改套件或 lockfile。frontend/dist 與快取為被忽略的驗證產物。
+
+### 實際結果與證據
+- 補 newline：exit 0；Ruff lint/format 各 exit 1：`No module named ruff`。
+- 第一次 pytest 在 sandbox 卡住，透過該工具 session 送 Ctrl-C 結束，exit 130，未停止使用者服務。
+- 有時限診斷收集到 2 tests，卡在第一個 fixture 的 `TestClient.__enter__` → AnyIO `start_task_soon` → future/thread wait；尚未發送 /health request。timeout 最終 exit 137。
+- 經權限流程於 sandbox 外重跑：exit 0，`2 passed, 1 warning in 0.23s`。支持 sandbox 執行環境相關問題，但未證明底層具體限制。
+- `npm run lint && npm run build` exit 0；Oxlint 通過，TypeScript build check 通過，Vite 8.3.0 build 通過（20 modules）。没有 frontend test script，未宣稱 frontend tests 通過。
+- diff check/status/stat/ignore 連續指令 exit 0；test diff 為 40 insertions、5 deletions（含使用者變更），新增紀錄尚未追蹤故未包含於 diff stat。
+- 秘密啟發式檢查 exit 0，唯一命中 backend/alembic.ini 的模板 `driver://user:pass@localhost/dbname`，並非真實 credential；不能保證涵蓋所有秘密格式或 Git 歷史。
+- `.env`、backend/.venv、frontend/node_modules、frontend/dist 均符合 ignore；無上述已追蹤產物。
+
+### 問題、Warning 與處理
+- 原文：`StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.`
+- 已確認 FastAPI/Starlette/httpx 實際版本（Step 00），但官方 release page 讀取失敗，相容矩陣與遷移方案尚未確認；未安裝 httpx2、未壓制 warning。留待獨立相依性決策。
+- ps 在隔離環境僅顯示該次 shell wrapper，無助確認另一 session；不再擴大列出程序。使用 session 控制停止自己的測試。
+- Ruff 無法執行屬缺少工具，不是 lint 通過。安裝須符合使用者規格 §5.2 的明確同意；本輪不自行安裝。
+- Docker 不可用、GitHub default branch 待遠端證據；沒有 integration、CI、smoke 或 clean clone 驗收結果。
+
+### 官方學習資源
+2026-09-24 查閱的 Ruff linter/formatter 官方頁見 Step 00，支持 check 與 format --check 的非自動修正模式。Starlette 遷移依據仍待查證，不能僅依 warning 文字作套件變更。
+
+### 狀態
+部分完成：pytest、前端現有 lint/type/build、diff/ignore 檢查通過；Ruff 受阻。不得建議合併。
+
+## 本輪交接（不是第一階段最終報告）
+
+- 現行資料流：React 仍為 Vite counter；Vite 已設定 /api proxy，但頁面尚未呼叫 health。FastAPI /health → check_database → SQLAlchemy SELECT 1；測試替換 check_database，不連 DB。
+- 建議 commit message：`test: make health checks deterministic`。提交範圍為 test_health.py 與本紀錄；尚未 git add/commit/push/PR。
+- 建議 PR title：`test: verify exact health success and failure responses`。
+- 建議 PR body：
+  - Why：既有測試同時接受 200/503，無法精確判斷成功與失敗合約。
+  - What：以 mock 分別驗證 DB check 成功與失敗，斷言固定 JSON、HTTP status、呼叫次數及不洩漏原始錯誤；附稽核紀錄。
+  - How to verify：backend `.venv/bin/python -m pytest -q`；安裝經批准 Ruff 後跑 lint/format；root `git diff --check`。
+  - Evidence：pytest 2 passed/1 warning；frontend lint、tsc、build 通過。
+  - Risks：Ruff 尚未通過、Starlette warning 未解、此 PR 只驗證 mock API，不能代表真實 MySQL 可用或整階段完成。
+- Ruff 0.16.8 已獲使用者同意安裝到 backend/.venv，未改 requirements/lockfile；下一個必要人工決定是是否執行 git add/commit/push/PR。
+- 不給第一階段最終完成度/信心百分比：本輪是初始稽核而非最終驗收，12 組任務均未全數達標；最終報告與量化評估待後續批准分支完成，避免用主觀權重冒充驗收結果。
+
+## Step 02：安裝 Ruff 並取得後端品質基線
+
+### 目的
+補齊目前虛擬環境缺少的 Ruff，實際執行規格要求的 lint 與 format check。
+
+### 執行前狀態
+`backend/.venv` 未安裝 Ruff；requirements.txt 沒有 Ruff，repository 也沒有 pyproject.toml 或 Ruff 專用設定。工作樹仍只有使用者的 health 測試修改與本紀錄。
+
+### 計畫
+依使用者「繼續做」的明確同意，只在已被 Git ignore 的 backend/.venv 安裝 Ruff，不修改 requirements 或 lockfile。安裝後先檢查整個 backend，再依結果區分本分支與既有問題。
+
+### 執行指令
+```bash
+git status --short --branch
+git diff -- backend/tests/test_health.py
+tail -100 docs/stage-1-implementation-log.md
+cat backend/requirements.txt
+cat .editorconfig
+backend/.venv/bin/python -m pip --version
+backend/.venv/bin/python -m pip install --no-cache-dir ruff
+# 沙箱 DNS 失敗後，經 require_escalated 流程在沙箱外重跑相同安裝指令
+backend/.venv/bin/python -m pip install --no-cache-dir ruff
+# backend 工作目錄
+.venv/bin/python -m ruff --version
+.venv/bin/python -m ruff check .
+.venv/bin/python -m ruff format --check .
+```
+下載時間較長時，曾唯讀列出 `/tmp/pip-*` 內 Ruff wheel 的檔名與大小，確認由 4 MiB、5 MiB、7 MiB 持續增長；未讀內容或改檔。
+
+### 指令說明
+`--no-cache-dir` 不把下載包留在 pip cache；套件只進 backend/.venv。`ruff check` 執行 lint，`ruff format --check` 只比較格式、不改檔。第一次安裝在受限網路內失敗後，按權限規則重跑沙箱外版本。
+
+### 修改檔案
+- `backend/.venv`：安裝 Ruff 0.16.8；此目錄被 Git ignore。
+- 沒有修改 requirements.txt、package-lock.json 或任何應用程式檔案。
+- `docs/stage-1-implementation-log.md`：記錄本步驟。
+
+### 實際結果與證據
+- 沙箱內安裝 exit 1：無法解析 pypi.org，最後顯示找不到可用 distribution；這是網路解析失敗，不代表 Ruff 套件不存在。
+- 沙箱外安裝 exit 0：下載 10.3 MB wheel，`Successfully installed ruff-0.16.8`。
+- Ruff version exit 0：`ruff 0.16.8`。
+- 全 backend lint exit 1：app/db.py、app/main.py、migrations/env.py 共 3 個 I001；app/main.py 有 1 個 BLE001。
+- 全 backend format check exit 1：app/config.py、migrations/env.py 會被重新格式化；tests/test_health.py 的 fixture 簽名也需要格式調整。
+
+### 問題、Warning 與處理
+- 安裝在沙箱內遇到 `NameResolutionError`；依規則以同一指令要求沙箱外網路權限，成功完成。
+- 其餘 Ruff 問題位於本分支未修改的 app/migration；不在 health 測試分支批次修正，避免混入功能與 migration 骨架整理。
+- repository 沒有固定 Ruff 版本的開發相依設定，其他環境未必會取得相同版本；這是後續 quality-gates 工作的缺口。
+
+### 官方學習資源
+- Ruff Installing Ruff：https://docs.astral.sh/ruff/installation/（查閱日期 2026-09-24）— 支持以 pip 安裝與 `ruff` CLI 的使用方式；本專案實際安裝 0.16.8。
+- Ruff linter／formatter 官方頁與用途見 Step 00。
+
+### 狀態
+完成：Ruff 已可執行，並取得可重現的全後端基線；全後端尚未通過。
+
+## Step 03：只修正本分支測試格式並完成驗證
+
+### 目的
+讓本分支新增的 health 測試符合 Ruff，同時保留全後端既有問題的清楚邊界。
+
+### 執行前狀態
+Ruff 指出 tests/test_health.py fixture 函式簽名需換行；測試斷言與行為本身沒有 lint 問題。
+
+### 計畫
+只按 Ruff 格式調整 fixture 簽名，不改斷言；對 tests/ 與整個 backend 分別驗證，再重跑 pytest、前端檢查、diff 與秘密模式掃描。
+
+### 執行指令
+```bash
+# apply_patch：只調整 tests/test_health.py fixture 簽名換行
+# backend 工作目錄
+.venv/bin/python -m ruff check tests
+.venv/bin/python -m ruff format --check tests
+.venv/bin/python -m ruff check .
+.venv/bin/python -m ruff format --check .
+# frontend 工作目錄
+npm run lint
+npm run build
+# repository root
+git diff --check
+git status --short --branch
+git diff --stat
+# backend 工作目錄；已知 sandbox TestClient 卡點，經權限流程在 sandbox 外執行
+timeout -s INT -k 5s 30s .venv/bin/python -m pytest -q
+# repository root；只輸出命中檔名，不輸出匹配值
+git ls-files -co --exclude-standard -z | xargs -0 -r rg -l --no-messages <秘密模式>
+```
+
+### 指令說明
+tests/ 範圍證明本分支檔案合格；全 backend 檢查保留基線。pytest 仍有 30 秒上限。秘密掃描涵蓋 tracked 與未追蹤但未 ignore 的檔案，匹配 private-key header、常見 GitHub/AWS token 與含帳密 URL；屬啟發式檢查。
+
+### 修改檔案
+- `backend/tests/test_health.py`：將 fixture 參數與回傳型別依 Ruff 拆行；測試行為、精確 status/JSON 斷言與洩漏檢查不變。
+- `docs/stage-1-implementation-log.md`：補記 Step 02、Step 03 與交接狀態。
+
+### 實際結果與證據
+- tests Ruff lint exit 0：`All checks passed!`。
+- tests format check exit 0：`1 file already formatted`。
+- 全 backend lint/format 仍各 exit 1；測試檔已不在問題清單，剩餘為 Step 02 列出的既有 app/migration 問題（format 問題降為 2 個）。
+- pytest exit 0：`2 passed, 1 warning in 0.21s`。
+- frontend lint/build exit 0：Oxlint、TypeScript、Vite 8.3.0 production build 通過，20 modules transformed。
+- git diff --check exit 0；工作樹只有修改的 backend/tests/test_health.py 與未追蹤 docs/。
+- 秘密模式掃描 exit 0，命中 backend/alembic.ini 的模板 credential URL，以及本紀錄對該模板的描述；未顯示值。沒有真實秘密證據，但啟發式掃描不是完整保證。
+
+### 問題、Warning 與處理
+- pytest 仍有同一個 StarletteDeprecationWarning；未在缺少官方相容性證據時更換 httpx 套件。
+- 全後端 Ruff 尚未通過，因此這次結果只支持「本分支測試檔符合 Ruff」，不支持「整個後端品質閘門通過」。
+- frontend 沒有 test script，本輪沒有前端功能測試結果。
+
+### 官方學習資源
+- Ruff linter：https://docs.astral.sh/ruff/linter/（查閱日期 2026-09-24）— 用於 tests 與全 backend lint。
+- Ruff formatter：https://docs.astral.sh/ruff/formatter/（查閱日期 2026-09-24）— 用於只檢查格式。
+- pytest output capture：https://docs.pytest.org/en/stable/how-to/capture-warnings.html（由測試輸出引用，查閱日期 2026-09-24）— warning 摘要位置；本輪未壓制 warning。
+
+### 狀態
+完成：目前分支的測試修改、tests Ruff、pytest、前端既有 lint/type/build、diff 與秘密模式檢查均已取得證據。全 backend 既有 Ruff 問題明確保留，需在後續相應分支處理。
+
+## test/health-checks 分支收尾狀態
+
+- 變更目的：把原本同時接受 200/503 的寬鬆測試，拆成 DB check 成功與失敗兩個精確案例。
+- 修改內容：固定 HTTP status 與 JSON；驗證 DB check 呼叫一次；驗證失敗回應不洩漏原始 DB 例外；測試不連真實 DB。
+- 驗證證據：tests Ruff lint/format 通過；pytest 2 passed/1 warning；前端既有 lint/type/build 通過；diff check 通過；秘密模式掃描只有已知模板/紀錄文字。
+- 未完成風險：全 backend 既有 Ruff 失敗；Starlette/httpx warning 未解；Docker/DB integration、CI、smoke、clean clone 均不在本分支證據內。
+- 建議 commit message：`test: make health checks deterministic`。
+- 建議 PR title：`test: verify exact health success and failure responses`。
+- 建議 PR 驗證：`cd backend && .venv/bin/python -m ruff check tests && .venv/bin/python -m ruff format --check tests && .venv/bin/python -m pytest -q`，再於 root 跑 `git diff --check`。
+- Git 狀態：尚未 git add、commit、push 或建立 PR；依使用者規格在這些操作前停止。
+
+## Step 04：確認 health-check 分支提交前狀態
+
+### 目的
+在任何 staging 前確認分支、工作樹與暫存區，確保本次 Git 收尾只處理 health 測試檔，docs/ 保持未追蹤。
+
+### 執行前狀態
+使用者明確授權只提交 `backend/tests/test_health.py`，並禁止 stage、commit、push 或刪除 docs/ 及其 Markdown。本輪禁止 push、PR 與 merge。
+
+### 計畫
+唯讀檢查目前分支、指定測試檔 diff 與 cached diff；若分支錯誤或暫存區已有內容就立即停止。
+
+### 執行指令
+```bash
+git status --short --branch
+git diff -- backend/tests/test_health.py
+git diff --cached
+```
+
+### 指令說明
+`status --short --branch` 同時顯示分支與精簡工作樹；指定 path 的 `git diff` 只讀取測試檔未暫存差異；`--cached` 檢查 index，沒有輸出表示暫存區為空。
+
+### 修改檔案
+- `docs/stage-1-implementation-log.md`：追加本步驟紀錄；保持 untracked，不加入暫存區。
+
+### 實際結果與證據
+- 指令組 exit 0。
+- 分支為 `test/health-checks`。
+- `backend/tests/test_health.py` 顯示預期修改；diff 為兩個精確成功／失敗測試與 fixture。
+- `git diff --cached` 無輸出，暫存區原本為空。
+- `docs/` 顯示 `?? docs/`，仍未追蹤。
+
+### 問題、Warning 與處理
+無。
+
+### 官方學習資源
+- Git status：https://git-scm.com/docs/git-status（查閱日期 2026-09-24）— 用於辨識工作樹與未追蹤檔案。
+- Git diff：https://git-scm.com/docs/git-diff（查閱日期 2026-09-24）— 用於區分工作樹 diff 與 cached diff。
+
+### 狀態
+完成；條件符合，可以進入重新驗證。
+
+## Step 05：提交前重新驗證 health 測試
+
+### 目的
+在 staging 前確認測試檔符合 Ruff、格式與測試要求，且工作樹 diff 沒有空白錯誤。
+
+### 執行前狀態
+分支與工作樹已在 Step 04 確認；暫存區為空，docs/ 未追蹤。
+
+### 計畫
+在 backend 執行 tests 範圍 Ruff 與 pytest，再於 repository root 執行 `git diff --check`。任一失敗就停止，不修改產品碼或相依套件。
+
+### 執行指令
+```bash
+# backend 工作目錄
+.venv/bin/python -m ruff check tests
+.venv/bin/python -m ruff format --check tests
+# 同一 pytest 指令經已核准的沙箱外環境執行，外層加 30 秒 timeout
+.venv/bin/python -m pytest -q
+# repository root
+git diff --check
+```
+
+### 指令說明
+Ruff `check` 執行 lint，`format --check` 只比較格式。pytest 執行兩個 health API 測試；因已知沙箱內 TestClient 卡點，於沙箱外執行相同測試。`git diff --check` 檢查未暫存差異的空白錯誤。
+
+### 修改檔案
+- `docs/stage-1-implementation-log.md`：追加驗證紀錄，保持 untracked。
+- 測試與品質指令沒有修改原始碼；可能更新被 ignore 的快取。
+
+### 實際結果與證據
+- Ruff lint exit 0：`All checks passed!`。
+- Ruff format check exit 0：`1 file already formatted`。
+- pytest exit 0：`2 passed, 1 warning in 0.22s`。
+- `git diff --check` exit 0，無輸出。
+
+### 問題、Warning 與處理
+- 已知 `StarletteDeprecationWarning`：Starlette TestClient 使用 httpx 已標記 deprecated。依使用者要求記錄但不安裝 httpx2、不升級套件。
+
+### 官方學習資源
+- Ruff linter／formatter 與 pytest 官方資源見 Step 03。
+- Git diff：https://git-scm.com/docs/git-diff（查閱日期 2026-09-24）— `--check` 用於偵測 whitespace errors。
+
+### 狀態
+完成；所有指定檢查通過，可以精確 stage 測試檔。
+
+## Step 06：精確加入 health 測試檔
+
+### 目的
+只把使用者允許的 `backend/tests/test_health.py` 加入 Git 暫存區，讓後續 commit 不包含 docs/ 或其他檔案。
+
+### 執行前狀態
+Step 04 已證明暫存區為空；Step 05 指定檢查全部通過；docs/ 未追蹤。
+
+### 計畫
+使用精確 pathspec 執行 `git add -- backend/tests/test_health.py`，不使用 `git add .`、`git add -A` 或資料夾路徑。
+
+### 執行指令
+```bash
+git add -- backend/tests/test_health.py
+# 沙箱內 .git 唯讀後，經 require_escalated 流程重跑完全相同的精確指令
+git add -- backend/tests/test_health.py
+```
+
+### 指令說明
+`--` 結束 Git 選項，後面只指定單一測試檔。這會更新 Git index，不會修改工作樹檔案或接觸遠端。
+
+### 修改檔案
+- Git index：只要求加入 `backend/tests/test_health.py`；實際內容會在下一步以 cached name/diff 核對。
+- `docs/stage-1-implementation-log.md`：追加本步驟，保持 untracked，不 stage。
+
+### 實際結果與證據
+- 沙箱內第一次執行 exit 128：`Unable to create .git/index.lock: Read-only file system`，未完成 staging。
+- 經權限流程重跑相同精確指令 exit 0。
+- 未使用任何廣泛 add、commit、push 或刪除指令。
+
+### 問題、Warning 與處理
+沙箱不允許寫入 `.git/index.lock`；使用已獲授權的精確命令在權限流程下完成。是否確實只有一個 staged 檔案，必須由下一步 cached 檢查確認。
+
+### 官方學習資源
+- Git add：https://git-scm.com/docs/git-add（查閱日期 2026-09-24）— pathspec 可限制加入的檔案。
+
+### 狀態
+完成 staging 動作；等待暫存區核對，尚未 commit。
+
+## Step 07：核對 health 測試暫存區
+
+### 目的
+在 commit 前證明 index 只包含允許的測試檔，docs/ 仍未追蹤，且 staged diff 沒有空白錯誤。
+
+### 執行前狀態
+已用精確 pathspec stage 測試檔；尚未 commit。
+
+### 計畫
+列出所有 cached 路徑、檢查 cached whitespace、閱讀指定測試 cached diff，最後查看精簡狀態。若 staged 路徑不只一個就停止。
+
+### 執行指令
+```bash
+git diff --cached --name-only
+git diff --cached --check
+git diff --cached -- backend/tests/test_health.py
+git status --short
+```
+
+### 指令說明
+`--cached` 讀取 Git index 而不是未暫存工作樹；`--name-only` 便於精確比對路徑；`--check` 檢查即將提交 diff 的 whitespace errors。
+
+### 修改檔案
+- `docs/stage-1-implementation-log.md`：追加核對證據，保持 untracked。
+- Git 唯讀檢查沒有修改 index 或工作樹。
+
+### 實際結果與證據
+- 指令組 exit 0。
+- staged name-only 恰好一行：`backend/tests/test_health.py`。
+- cached diff check 無輸出。
+- cached diff 是預期 fixture、成功 200 與失敗 503 精確測試，包含不洩漏原始錯誤的斷言。
+- status：`M  backend/tests/test_health.py`、`?? docs/`；沒有其他 staged 檔案。
+
+### 問題、Warning 與處理
+無。
+
+### 官方學習資源
+- Git diff：https://git-scm.com/docs/git-diff（查閱日期 2026-09-24）— cached diff 用於檢查 index 與 HEAD 的差異。
+
+### 狀態
+完成；暫存區符合使用者限制，可以建立指定 commit。
+
+## Step 08：建立 health 測試 commit
+
+### 目的
+將 Step 07 已核對的唯一 staged 測試檔建立成本機 commit，不包含 docs/。
+
+### 執行前狀態
+Git index 只有 `backend/tests/test_health.py`；docs/ 顯示未追蹤；所有指定檢查通過。
+
+### 計畫
+使用使用者指定的 commit message 建立本機 commit，不使用 `-a`，不 push、不建立 PR。
+
+### 執行指令
+```bash
+git commit -m "test: make health checks deterministic"
+```
+
+### 指令說明
+`-m` 設定 commit subject；未使用 `-a`，因此只提交已核對的 index 內容。指令經權限流程寫入本機 `.git`，不接觸遠端。
+
+### 修改檔案
+- 本機 Git 歷史：新增一個 commit。
+- `docs/stage-1-implementation-log.md`：追加結果，仍未追蹤且未包含在 commit。
+
+### 實際結果與證據
+- exit 0。
+- short hash：`c86b609`。
+- message：`test: make health checks deterministic`。
+- Git 摘要：`1 file changed, 42 insertions(+), 5 deletions(-)`。
+
+### 問題、Warning 與處理
+無。commit 的精確檔案清單與最終狀態仍須由下一步查核。
+
+### 官方學習資源
+- Git commit：https://git-scm.com/docs/git-commit（查閱日期 2026-09-24）— commit 記錄目前 index 的內容。
+
+### 狀態
+完成；等待提交後查核。未 push、未建立 PR、未 merge。
+
+## Step 09：提交後查核與停止點
+
+### 目的
+確認最新 commit 只包含允許的 health 測試檔，docs/ 仍留在本機未追蹤，然後依使用者要求停止。
+
+### 執行前狀態
+本機 commit `c86b609` 已建立；尚未 push、PR 或 merge。
+
+### 計畫
+讀取 HEAD 統計與最終精簡狀態；不再執行任何 Git 寫入或遠端操作。
+
+### 執行指令
+```bash
+git show --stat --oneline --summary HEAD
+git status --short --branch
+```
+
+### 指令說明
+`git show --stat` 顯示 HEAD 的 subject 與檔案統計；`git status --short --branch` 顯示目前分支及未追蹤檔案。
+
+### 修改檔案
+- `docs/stage-1-implementation-log.md`：追加最終查核；仍為 untracked，未包含於 commit。
+- 查核指令沒有修改 Git 或工作樹。
+
+### 實際結果與證據
+- 指令組 exit 0。
+- HEAD：`c86b609 test: make health checks deterministic`。
+- commit 只列出 `backend/tests/test_health.py`：42 insertions、5 deletions。
+- 最終狀態：分支 `test/health-checks`，僅 `?? docs/`。
+- docs/ 沒有 stage、commit 或刪除；其 Markdown 保留在本機。
+
+### 問題、Warning 與處理
+無。
+
+### 官方學習資源
+- Git show：https://git-scm.com/docs/git-show（查閱日期 2026-09-24）— 用於檢查 HEAD commit 內容與統計。
+
+### 狀態
+完成。本輪按要求停止；未 push、未建立 Pull Request、未 merge。
+
+## Step 10：補記 GitHub 流程與重新接手
+- 日期：2026-09-27；起始分支 test/health-checks，只有 docs/ 未追蹤；本機 main 4853dbc 落後遠端。
+- 目的／範圍：保護既有紀錄，核實 PR #1，先以獨立文件 PR 納入版本管理。
+- 方法與原因：原文保留為歷史；本輪使用者授權取代舊文「需逐項批准」限制。順序改為文件保存 → CI → 功能，確保後續 PR 有自動檢查。原檔實際只有 Step 00～09，本步補足 Step 10。
+- 指令與用途：`git status --short --branch`、`git branch -vv`、`git log -3 --oneline`、`git remote -v`、`git ls-files`、`git diff` 唯讀稽核；`cp docs/stage-1-implementation-log.md /tmp/cost-inventory-stage-1-original.md` 保留原始副本；`gh pr view 1 --json number,state,mergeCommit,url,files,statusCheckRollup` 查遠端證據；`git fetch origin` 更新遠端參照、`git switch main`、`git merge --ff-only origin/main` 僅快轉同步，再建立 docs/preserve-stage-1-log。
+- 修改：只追加本紀錄；未讀取 .env 值，未改使用者資料。
+- 實際結果：gh 2.101.0 可查詢私人授權範圍；先前安裝／登入與 push 已由使用者提供，本輪未重新安裝或輸出憑證。PR #1 已 MERGED，僅 backend/tests/test_health.py，merge d5669d3f91a572247b032fd43a607d9eefb632a0；statusCheckRollup 為空，沒有 CI，不符合完整品質門檻。
+- 問題：Docker 指令仍回 WSL integration 未啟用；真實 DB／重啟持久性驗收受阻，其他工作繼續。先前三份規格未附於本輪，以本輪完整要求為準。92% 為規劃信心，不是實作進度。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/1
+- 官方來源：本步無新增技術引用，依實際 CLI 結果。
+- 狀態：文件保存進行中；下一步 CI 基線。第一階段仍進行中。
