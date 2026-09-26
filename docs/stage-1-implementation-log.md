@@ -587,3 +587,15 @@ git status --short --branch
 - 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/3 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36255713755
 - 官方依據：沿用 Step 11。
 - 狀態：CI 待修正後驗收；下一步後端健康 API。
+
+## Step 13：後端健康檢查與設定邊界
+- 日期／分支／前置：2026-09-27，feat/backend-health；PR #3 最新 CI 36255812580 全綠後合併 490ba80，main 同步乾淨。
+- 目的：保留 /health 精確合約；新增不連 DB 的 live 與 SELECT 1 ready。
+- 方法：router 拆分路由；Depends 提供可替換 callable，使單元測試不接觸使用者 DB；延後建立 settings/engine，使 live 不依賴 DB 設定。SecretStr 避免設定 repr 顯示密碼；URL.create 正確處理特殊字元，連線/讀寫/pool 有界逾時。
+- 指令／用途：`ruff check backend --fix`、`ruff format backend` 整理；backend `pytest -q` 驗證成功/失敗/live/SELECT 1/密碼遮蔽；全 Ruff check/format check 核對。
+- 修改：app/config.py、db.py、health.py、main.py；tests/test_health.py 改依賴注入測試，新增 test_db.py。
+- 本機結果：7 passed，1 已知 Starlette warning；Ruff 全通過，8 files 格式通過；未連真實 DB。
+- 問題／決策：舊 /health 失敗 body 不能任意加入 error 欄位；下一步只對新 /health/ready 與一般錯誤採 envelope，legacy 用 header 追蹤。官方 Starlette 現確認 httpx 仍受支援但 deprecated，本階段保留固定版本與顯示 warning，不盲目升級。
+- 追蹤：CI 基線 https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36255812580 ；本主題 PR 建立後於驗收表彙整。
+- 官方來源／日期：2026-09-27，https://fastapi.tiangolo.com/advanced/testing-dependencies/ 、https://docs.sqlalchemy.org/en/20/faq/connections.html 、https://starlette.dev/testclient/ 。
+- 任務表：CI 基線已驗收（integration/frontend tests 待擴充）；health 本機已驗證、遠端待驗收；Docker 仍不可用；其他未開始。
