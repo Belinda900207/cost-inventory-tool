@@ -678,3 +678,15 @@ git status --short --branch
 - 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/9 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36256859998
 - 官方來源／日期：2026-09-27，https://playwright.dev/docs/test-webserver 。
 - 任務表：auth 已驗收；browser 工具本機部分完成／CI 待驗收；交接文件與 clean clone 未完成。
+
+## Step 20：文件交接與可重建命令
+- 日期／分支／起點：2026-09-27，docs/stage-1-handoff；PR #10 四項 CI run 36322992915 全綠，merge 61e56b1 後同步 main。
+- 目的：把新開發者從 clone、設定、啟動、測試到 PR 的實際流程放進 repository；整理架構、決策、AI 協作與驗收證據。
+- 方法：README 只列已由本機或乾淨 runner 執行過的命令；env 初始化使用 O_EXCL 與 0600 隨機值，既有 `.env` 不讀不覆寫。分離「已通過」「待 final main」「本機環境阻塞」，不把 CI 證據冒充本機 Docker。
+- 指令：`gh run view 36322992915 --log` 篩選測試摘要；`gh run download ... browser-evidence` 下載 artifact 到 `/tmp`；逐張檢查 healthy、DB unavailable、backend unavailable、loading；本步將重跑 Ruff、pytest、前端完整檢查、link/秘密/diff 檢查。
+- 修改：根 README；architecture/decisions/development-workflow/ai-workflow/stage-1-verification；PR template；scripts/init_dev_env.py；補 `.env.example` 欄位。
+- 實際結果：PR #10 browser 2 passed / 15.9s；mysql log 明確顯示 Alembic current 成功與 MySQL 8.4 app SELECT 1、persistent UUID、outage/recovery；四張 PNG 均存在且人工檢查文字／狀態正確。交接後本機 backend 18 passed／1 integration skipped／1 warning、Ruff 22 files、Alembic heads 通過；frontend 7 passed、lint/typecheck/build（18 modules）與 2 e2e cases discovery 通過；repository/bundle scan 與 diff check 通過。init_dev_env 在既有 `.env` 上只回報 preserved，前後 mtime/size 完全相同。
+- 問題／風險：browser artifact retention 14 天；文件保存永久 run URL 與摘要。本機 WSL Docker 仍不可用。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/10 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36322992915
+- 官方來源：先前各步所列官方文件；本步以 repository 實際命令與 CI 證據為主。
+- 任務表：CI/health/observability/MySQL/Alembic/frontend/auth/browser 已驗收；文件進行中；clean clone 與 main push 最終驗收未完成。
