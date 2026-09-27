@@ -711,4 +711,6 @@ git status --short --branch
 - 指令／結果：main run 36324022795 顯示 `checkout@v4`、`setup-node@v4` Node 20 deprecated annotation；官方資料確認 checkout/setup-node/setup-python v7 與 upload-artifact v7 為目前用法。此步只改 action majors 與紀錄，須由四項 CI 再驗證 inputs/cache/artifact 相容。
 - 修改：`.github/workflows/quality.yml` 與本紀錄；不改 application、tests、dependencies 或環境資料。
 - 官方來源／日期：2026-09-27，https://github.com/actions/checkout 、https://github.com/actions/setup-node 、https://github.com/actions/setup-python 、https://github.com/actions/upload-artifact/releases 。
-- 狀態：待 PR 四項 CI 與 annotations 核對；第一階段功能驗收不變。
+- 結果：PR #13 run 36324159572 的 backend、frontend、mysql-integration、browser-integration 全綠；browser-evidence artifact 110,504 bytes、未過期；完整 run log 不再含 Node 20 deprecation。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/13 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36324159572
+- 狀態：Actions v7 相容性已驗證；第一階段功能與驗收結論不變。
