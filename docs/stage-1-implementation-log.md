@@ -690,3 +690,16 @@ git status --short --branch
 - 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/10 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36322992915
 - 官方來源：先前各步所列官方文件；本步以 repository 實際命令與 CI 證據為主。
 - 任務表：CI/health/observability/MySQL/Alembic/frontend/auth/browser 已驗收；文件進行中；clean clone 與 main push 最終驗收未完成。
+
+## Step 21：Clean clone、本機 MySQL 與 main 最終驗收
+- 日期／分支／起點：2026-09-27，test/stage-1-verification；PR #11 四項 CI run 36323359476 通過，merge 22e87b5 後同步 main。
+- 目的：依 README 從遠端 main 全新重建，補本機真實 DB 證據，並核對合併後 main push CI。
+- 方法：`mktemp -d` 建全新 `/tmp/cost-inventory-clean-zI2ddv`，clone `main`；不複製現有 venv/node_modules/env。依 README 建 venv、pip install requirements-dev、npm ci、init_dev_env，再執行後端／前端／產物檢查。本機只啟動 `cost-inventory-test`，不操作開發 Compose。
+- 指令／用途：`git clone --branch main --single-branch ...`；README 安裝與測試命令；`gh run list --branch main --workflow 'Quality gates'`；Windows `docker.exe version` 與固定 test Compose；以 `/tmp/cost-inventory-docker-bin/docker` 暫存 wrapper 讓 integration subprocess 使用同一 Docker CLI；完成後 `docker.exe compose ... stop`，沒有 down 或刪 volume。
+- Clean clone 結果：HEAD `22e87b54...`、初始 status clean；npm ci 101 packages／0 vulnerabilities；新 `.env` mode 600 且 ignored；backend 18 passed／1 integration skipped／1 warning，Ruff 22 files、Alembic heads 通過；frontend 7 passed、lint/typecheck/build 18 modules、2 e2e cases discovery、bundle/repository scan 通過。
+- 本機 DB 結果：原生 `docker` 仍顯示 WSL integration 未啟用；直接 `docker.exe` 在 Docker Desktop 啟動後取得 server 29.8.0。隔離 MySQL 測試 1 passed／1 warning／19.93s，log 證明 Alembic current、MySQL 8.4 app SELECT 1、server UUID 持久、DB stop 時 live 200／ready 503、恢復後 ready 200。測試 DB 最後 stopped，volume 保留；開發 DB 未啟動、停止或修改。
+- main 證據：push run 36323469957 對 `22e87b5` completed success，backend/frontend/mysql-integration/browser-integration 四項全綠。PR #11 run 36323359476 亦四項全綠。
+- 問題／風險：Playwright 本機 Linux Chromium 仍缺系統 library 且自動 install-deps 需要互動 sudo；同一 clean checkout 的 GitHub browser job 已安裝依賴並通過。WSL native docker integration 建議由本人於 Desktop 設定修復，README 補 `docker.exe` fallback。Starlette/httpx warning 保留為已知技術債。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36323469957 、https://github.com/Belinda900207/cost-inventory-tool/pull/11
+- 任務表：第一階段必要項全部已驗收；本機環境限制與第二階段待決策已明列。
+- 信心評估：第一階段實作 98/100；支持為 clean clone、PR/main 四層 CI、本機與 CI 雙重 DB 故障證據、browser artifacts、秘密/產物檢查。扣 2 分為 WSL native docker symlink 與已知 TestClient deprecation warning。此值是證據信心，不是完成度；驗收項本身已全部完成。
