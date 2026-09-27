@@ -664,3 +664,17 @@ git status --short --branch
 - 官方來源：沿用 FastAPI Depends 文件；未新增外部認證方案。
 - 任務表：前端已通過 CI；auth 本機完成/遠端待驗收；文件與最終驗收未完成。
 - 後续順序調整：先做 browser 驗收工具 PR，再整理 README／交接，讓 README 引用已實跑的命令；最後 clean clone 與 main 驗收單獨補證據。
+
+## Step 19：瀏覽器端到端驗收工具與產物檢查
+- 日期／分支／起點：2026-09-27，test/browser-verification；PR #9 三項 CI 36256859998 通過，merge 6e7a744 後同步 main。
+- 目的：以 Chromium 實測 loading、成功、真實 DB 失敗／恢復與後端斷線；保留畫面 artifact，並檢查 Git 追蹤範圍與 bundle 秘密。
+- 方法：Playwright 固定 1.63.0；Vite webServer 提供 UI。真實案例先確認 8000 未被其他程序占用，再由只讀 `.env.test` 的 helper 啟動 API；只停止固定 `cost-inventory-test` Compose project。測試 finally 恢復測試 DB，從不刪 volume。
+- 指令／用途：`npm install --save-dev --save-exact @playwright/test@1.63.0` 更新 lockfile；`npx playwright install chromium` 下載瀏覽器；`npm run test:e2e` 執行；`python scripts/check_repository.py` 檢查 tracked env/產物與 production bundle。
+- 修改：Playwright config/e2e、browser CI job、API helper、repository checker、package/lock、tsconfig、gitignore。CI 會安裝 Chromium system deps，跑真實 MySQL/browser 並上傳 14 天 screenshot evidence。
+- 本機結果：npm audit 0 vulnerabilities；Oxlint、tsc、7 component tests、production build 18 modules、tracked artifact 與 bundle heuristic secret scan 通過。
+- 失敗紀錄：本機 Playwright 兩案例在 browser launch 前因缺 `libnspr4.so` 失敗；`playwright install-deps chromium` 嘗試安裝，但 sudo 要求互動密碼而 exit 1。這不是 UI assertion 結果。本機 Docker 仍不可用，真實案例須由 CI 驗證。已把 opt-in skip 移到 test 宣告前，避免未啟用案例建立 browser fixture。
+- 安全：checker 不讀開發 `.env`；只可讀自動生成 `.env.test` 的 password 值以比對 bundle，且不輸出值。API helper assert test DB 名稱／user／port，不接受開發 DB。
+- 風險：CI browser job 尚待實跑；artifact 只保存 14 天，長期證據記錄 run URL 與摘要。
+- 追蹤：https://github.com/Belinda900207/cost-inventory-tool/pull/9 、https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36256859998
+- 官方來源／日期：2026-09-27，https://playwright.dev/docs/test-webserver 。
+- 任務表：auth 已驗收；browser 工具本機部分完成／CI 待驗收；交接文件與 clean clone 未完成。
