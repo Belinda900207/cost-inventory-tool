@@ -22,3 +22,7 @@ frontend/dist/
 # Local data and logs
 *.log
 data/
+
+# Browser verification artifacts
+frontend/test-results/
+frontend/playwright-report/
