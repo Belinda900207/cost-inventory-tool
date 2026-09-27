@@ -703,3 +703,12 @@ git status --short --branch
 - 追蹤：https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36323469957 、https://github.com/Belinda900207/cost-inventory-tool/pull/11
 - 任務表：第一階段必要項全部已驗收；本機環境限制與第二階段待決策已明列。
 - 信心評估：第一階段實作 98/100；支持為 clean clone、PR/main 四層 CI、本機與 CI 雙重 DB 故障證據、browser artifacts、秘密/產物檢查。扣 2 分為 WSL native docker symlink 與已知 TestClient deprecation warning。此值是證據信心，不是完成度；驗收項本身已全部完成。
+
+## Step 22：GitHub Actions Node 24 runtime 維護
+- 日期／分支／起點：2026-09-27，ci/node24-actions；PR #12 四項 CI run 36323899964 通過，merge 06433d5 後 main 同步。
+- 目的：移除最終 main run 新出現的 GitHub-hosted runner 警告；避免 Node 20 action runtime 淘汰後 CI 失效。
+- 方法：依 GitHub 官方各 action 目前 README/release，將 checkout、setup-python、setup-node、upload-artifact 一致升級至 v7。這些 action 使用 Node 24／ESM；現有 GitHub-hosted ubuntu-24.04 runner 符合最低 runner 版本。
+- 指令／結果：main run 36324022795 顯示 `checkout@v4`、`setup-node@v4` Node 20 deprecated annotation；官方資料確認 checkout/setup-node/setup-python v7 與 upload-artifact v7 為目前用法。此步只改 action majors 與紀錄，須由四項 CI 再驗證 inputs/cache/artifact 相容。
+- 修改：`.github/workflows/quality.yml` 與本紀錄；不改 application、tests、dependencies 或環境資料。
+- 官方來源／日期：2026-09-27，https://github.com/actions/checkout 、https://github.com/actions/setup-node 、https://github.com/actions/setup-python 、https://github.com/actions/upload-artifact/releases 。
+- 狀態：待 PR 四項 CI 與 annotations 核對；第一階段功能驗收不變。
