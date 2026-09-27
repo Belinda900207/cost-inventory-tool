@@ -11,6 +11,8 @@
 - Node.js 24.21.0 與 npm
 - Docker Desktop／Docker Engine，且可執行 `docker compose`
 
+WSL 若 `docker` 顯示 Desktop integration 未啟用，但 `docker.exe version` 能取得 server 版本，可在本頁命令中暫以 `docker.exe` 取代 `docker`；仍建議在 Docker Desktop 設定中啟用該 WSL distribution 的 integration。
+
 ## 從 clone 啟動
 
 ```bash
