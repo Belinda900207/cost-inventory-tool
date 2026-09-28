@@ -212,7 +212,7 @@ FIFO 與加權平均都依賴批次時間、剩餘數量及精確成本；若資
 - 完整 backend：24 passed、0 failed、2 skipped、1 warning；兩個 skip 是未在本機啟用的隔離 MySQL tests，沒有稱為通過。
 - Ruff：34 files lint／format passed；Alembic head 為 `20260928_01_inventory`。
 - Frontend：10 passed、0 failed；Oxlint、TypeScript 與 production build 通過，21 modules。
-- 真實 MySQL upgrade、constraints、持久化及 PR browser regression 尚待 CI。
+- PR CI run `36382803280`：backend 26 秒、frontend 12 秒、mysql-integration 1 分 11 秒、browser-integration 1 分 34 秒，四項全綠。MySQL integration 真實執行 migration、constraints、持久化與重連案例，並非 skip。
 
 ### 失敗與修正
 
@@ -235,4 +235,4 @@ FIFO 與加權平均都依賴批次時間、剩餘數量及精確成本；若資
 
 ### 狀態與證據信心
 
-本機 unit/API/component/品質檢查完成；乾淨 MySQL 8.4 已證明 migration、持久化與 constraint 生效，但修正測試例外分類後仍待 CI 重跑。現階段信心 94/100，主要扣分是修正後完整 CI 證據尚未產生。
+本機 unit/API/component/品質檢查與 PR CI 全綠；乾淨 MySQL 8.4 已證明 migration、持久化、constraints 與重連，browser integration 也通過。現階段信心 98/100，保留 2 分是 MVP 尚未進入下一支成本計算 PR，這不屬於本 PR 邊界。
