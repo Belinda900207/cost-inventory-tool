@@ -29,6 +29,72 @@ export interface PurchaseBatchInput {
   purchased_at: string
 }
 
+export type CostMethod = 'fifo' | 'weighted_average'
+export type ComparedMethod = CostMethod | 'equal'
+
+export interface CostMethodResult {
+  method: CostMethod
+  unit_cost: string
+  total_cost: string
+  gross_profit: string
+  gross_margin_percent: string
+}
+
+export interface CostSimulation {
+  product_id: number
+  quantity: number
+  currency: 'CAD'
+  selling_unit_price: string
+  revenue: string
+  fifo: CostMethodResult
+  weighted_average: CostMethodResult
+  difference: {
+    total_cost: { amount: string; higher_method: ComparedMethod }
+    gross_profit: { amount: string; higher_method: ComparedMethod }
+  }
+  inventory_changed: false
+  disclaimer: string
+}
+
+export interface CostSimulationInput {
+  product_id: number
+  quantity: number
+  selling_unit_price: string
+  currency: 'CAD'
+}
+
+export class ApiRequestError extends Error {
+  readonly status: number
+  readonly code: string
+  readonly details: Record<string, string | number>
+
+  constructor(
+    status: number,
+    code: string,
+    details: Record<string, string | number> = {},
+  ) {
+    super(code)
+    this.name = 'ApiRequestError'
+    this.status = status
+    this.code = code
+    this.details = details
+  }
+}
+
+function errorDetails(body: unknown): { code: string; details: Record<string, string | number> } {
+  if (!body || typeof body !== 'object' || !('error' in body)) {
+    return { code: 'request_failed', details: {} }
+  }
+  const error = body.error
+  if (!error || typeof error !== 'object') return { code: 'request_failed', details: {} }
+  const code = 'code' in error && typeof error.code === 'string' ? error.code : 'request_failed'
+  const details = 'details' in error && error.details && typeof error.details === 'object'
+    ? Object.fromEntries(Object.entries(error.details).filter(([, value]) =>
+      typeof value === 'string' || typeof value === 'number'))
+    : {}
+  return { code, details }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     ...init,
@@ -40,7 +106,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new Error('invalid_response')
   }
-  if (!response.ok) throw new Error('request_failed')
+  if (!response.ok) {
+    const error = errorDetails(body)
+    throw new ApiRequestError(response.status, error.code, error.details)
+  }
   return body as T
 }
 
@@ -58,4 +127,8 @@ export function listInventory(): Promise<InventoryItem[]> {
 
 export function createPurchaseBatch(input: PurchaseBatchInput): Promise<InventoryBatch> {
   return request('/api/v1/purchase-batches', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function simulateCost(input: CostSimulationInput): Promise<CostSimulation> {
+  return request('/api/v1/simulations/cost', { method: 'POST', body: JSON.stringify(input) })
 }

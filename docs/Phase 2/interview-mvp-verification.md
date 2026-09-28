@@ -1,0 +1,111 @@
+# 三天面試 MVP 最終驗證
+
+狀態：PR-MVP-3 功能 head `3b219b6` 的四個 PR CI jobs 全綠，clean-clone 與 browser artifact 已核對；最終證據 commit、合併及合併後 main CI 尚待完成。
+
+## 可驗證範圍
+
+本 MVP 是本機與受控 CI 用的成本比較垂直切片。它能建立商品與 CAD 進貨批次、保存至 MySQL、查詢庫存，並同時試算 FIFO 與數量加權平均。試算不保存、不扣庫存、不推薦成本法。
+
+它不是可公開部署的 Production 系統；正式 auth、訂單、併發扣庫存、匯率、稽核與雲端均未實作。
+
+## Repository 與 PR 證據
+
+| PR | 分支 | 主要 commit | 狀態／證據 |
+| --- | --- | --- | --- |
+| [#14](https://github.com/Belinda900207/cost-inventory-tool/pull/14) | `docs/interview-mvp-contract` | `a3ef213`、`d4a7eab` | 已合併；main run `36381274891` 全綠 |
+| [#15](https://github.com/Belinda900207/cost-inventory-tool/pull/15) | `feat/interview-inventory-foundation` | `2bc3da9`、`0978861`、`3738ba8` | 已合併；main run `36387141160` 全綠 |
+| [#16](https://github.com/Belinda900207/cost-inventory-tool/pull/16) | `feat/interview-cost-simulation` | `b95e916`、`c86f7ae` | 已合併；main run `36425691886` 全綠 |
+| [#17](https://github.com/Belinda900207/cost-inventory-tool/pull/17) | `feat/interview-cost-comparison-ui` | `faf1de8`…`3b219b6` | 功能、clean clone 與 run [`36431017696`](https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36431017696) 四項全綠；證據 commit 待重驗 |
+
+## 資料庫與 migration
+
+- Alembic head：`20260928_01_inventory`。
+- 業務資料表只有 `products` 與 `purchase_batches`；另有 `alembic_version`。
+- `products.normalized_name` 唯一；批次有商品 FK、正數成本、原始／剩餘量範圍與 CAD constraints。
+- 金額保存為 `DECIMAL(19,6)`；時間以 UTC connection convention 保存。
+- 沒有 `orders`、`simulation_history`、users、customers、warehouses 或 exchange rates 表。
+
+## API 摘要
+
+| 方法／路徑 | 用途 |
+| --- | --- |
+| `POST /api/v1/products` | 建立正規化、防重商品 |
+| `GET /api/v1/products` | 查詢商品 |
+| `POST /api/v1/purchase-batches` | 建立 CAD 進貨批次 |
+| `GET /api/v1/inventory` | 查詢所有庫存與批次 |
+| `GET /api/v1/inventory/{product_id}` | 查詢單一商品庫存 |
+| `POST /api/v1/simulations/cost` | 同時回 FIFO／加權平均；純試算 |
+
+所有金額以字串傳輸；錯誤使用含 request ID 的安全 envelope。庫存不足為 `409 insufficient_inventory`，只回 requested/available 安全整數。
+
+## 固定案例實際輸出
+
+庫存固定為較早 `20 × CAD 80`、較晚 `10 × CAD 100`，共 30。
+
+| 數量／售價 | FIFO | 數量加權平均 | 結果 |
+| --- | --- | --- | --- |
+| 1／CAD 120 | 單位與總成本 80.00；毛利 40.00；毛利率 33.33% | 單位與總成本 86.67；毛利 33.33；毛利率 27.78% | 成功，庫存仍 30 |
+| 25／CAD 120 | 單位 84.00；總成本 2100.00；毛利 900.00；毛利率 30.00% | 單位 86.67；總成本 2166.67；毛利 833.33；毛利率 27.78% | 成本／毛利差額皆 66.67 |
+| 30 | 總成本 2600.00 | 總成本 2600.00 | 剛好使用全部可用量的試算成功；實際庫存仍 30 |
+| 31 | 無部分成功 | 無部分成功 | `409 insufficient_inventory`，requested 31／available 30 |
+
+## 無副作用證據
+
+PR #16 的 MySQL integration 在真實 MySQL 8.4 中：
+
+1. 建立商品與兩批資料。
+2. 對相同 payload 連續呼叫試算 API 十次並逐一比較 response。
+3. 再執行剛好 30 與不足 31 的案例。
+4. 試算前後比較每個 batch 的 ID、商品、原始量、剩餘量、成本、幣別與三個 timestamps。
+5. 確認資料表集合仍只有 `alembic_version`、`products`、`purchase_batches`。
+
+結果：run `36425383383` 與合併後 main run `36425691886` 的 mysql-integration 均通過，沒有 skip；兩批剩餘量保持 20／10。
+
+## 測試矩陣
+
+| 層級 | 本機結果 | CI／限制 |
+| --- | --- | --- |
+| Backend pytest | 39 passed、3 skipped、1 warning | CI 同結果；skip 僅為三支另由 MySQL job 執行的 opt-in tests |
+| Ruff | 45 files lint／format passed | CI 45 files passed |
+| Frontend Vitest | 14 passed | CI 14 passed |
+| Oxlint／TypeScript／build | passed；22 modules | CI passed；22 modules |
+| MySQL integration | 本機 Docker Desktop daemon 未啟動，未通過 | CI 真實 MySQL 8.4：3 passed、0 skipped、1 warning |
+| Playwright | 本機缺 `libnspr4.so`，未通過 | CI 安裝 Chromium dependencies：2 passed、0 skipped，17.2s |
+| Repository scan | tracked artifact 與 bundle heuristic secret scan passed | CI passed |
+
+## Browser 與截圖證據
+
+PR #17 run [`36431017696`](https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36431017696) 的 real-stack Playwright 為 2 passed、0 skipped。它建立真實 MySQL 商品與兩批、驗證 q=1／25／31、連續十次試算後 inventory 仍為 30 且批次仍為 20／10，也實際停止／恢復 DB 及停止 API 驗證錯誤畫面。
+
+[`browser-evidence` artifact](https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36431017696/artifacts/10974310555)（ID `10974310555`、775,683 bytes、保留至 2026-10-12）已下載核對，共 7 個 PNG：
+
+- `healthy.png`
+- `cost-comparison-1.png`
+- `cost-comparison-25.png`
+- `inventory-unchanged.png`
+- `database-unavailable.png`
+- `backend-unavailable.png`
+- `loading.png`
+
+## Clean-clone 驗收
+
+已從 remote `feat/interview-cost-comparison-ui` clone 至全新的隨機 `/tmp` 目錄，沒有沿用原工作樹的 `.venv`、`node_modules` 或 build output。實際結果：
+
+- 全新 Python virtualenv 安裝成功；Ruff lint／format 45 files 通過。
+- pytest 39 passed、3 個 opt-in MySQL tests skipped、1 個既有 deprecation warning。
+- Alembic head 為 `20260928_01_inventory`。
+- `npm ci` 安裝 101 packages，audit 為 0 vulnerabilities。
+- Oxlint、TypeScript、Vitest 14 tests、production build 22 modules 與 repository／bundle heuristic scan 全部通過。
+- Uvicorn 從 clean clone 啟動成功，`GET /health/live` 回 `200` 與 `{"status":"ok"}`，隨後正常停止。
+
+本機 Docker daemon 未啟動，因此 clean clone 的 migration upgrade、真實 MySQL 與 real-stack browser 沒有在本機重複執行，也不稱為本機通過；已由上述隔離 PR CI 的 MySQL 與 browser jobs 補足證據。
+
+## 已完成與未完成
+
+已完成：商品、進貨批次、MySQL migration/persistence、庫存查詢、pure FIFO、pure weighted average、Decimal response、無副作用試算 API、安全錯誤、比較 UI 與自動測試。
+
+未完成：正式身分驗證與權限、正式訂單與扣庫存、idempotency／row locking／超賣防護、取消更正與 audit、即時匯率、非 CAD、多倉庫、多租戶、客戶功能、雲端部署、網域與備份。這些不得由 MVP 推定為已完成。
+
+## 完成度與信心
+
+功能 head、clean clone、真實 MySQL、real-stack browser 與 artifact 均完成：三天面試 MVP 99%；證據信心 99/100。剩餘 1% 是證據-only commit 的最終 CI、一般 merge 與合併後 main CI 尚未完成，不是已知功能缺陷。

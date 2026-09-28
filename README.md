@@ -92,6 +92,20 @@ docker compose stop
 
 目前沒有商品改名、刪除、正式訂單或扣庫存；試算只回傳客觀比較，不推薦成本法，且不會改變批次剩餘數量。
 
+## 三至五分鐘展示流程
+
+啟動服務並打開網頁後，全程可由畫面完成：
+
+1. 建立「商品 A」。
+2. 建立較早的 `20 × CAD 80` 與較晚的 `10 × CAD 100` 兩批進貨。
+3. 確認總庫存 30、批次剩餘量 20 與 10。
+4. 試算 1 個、成交單價 CAD 120：FIFO 單位成本 80.00，加權平均 86.67。
+5. 試算 25 個：FIFO 總成本 2100.00，加權平均總成本 2166.67。
+6. 試算 31 個：畫面顯示庫存不足，不回傳部分結果。
+7. 再確認總庫存仍為 30；試算沒有建立訂單或扣除庫存。
+
+畫面中的毛利是成本比較用試算，不是正式會計淨利；兩種成本法並列且沒有系統推薦。
+
 ## 驗證
 
 後端單元/API 與品質檢查：
@@ -161,3 +175,5 @@ GitHub Actions 對 PR 與 `main` 執行 backend、frontend、mysql-integration�
 - [API 合約](docs/Phase%202/interview-mvp-api-contract.md)
 - [MVP-only 決策](docs/Phase%202/interview-mvp-decisions.md)
 - [施工紀錄](docs/Phase%202/interview-mvp-implementation-log.md)
+- [最終驗證](docs/Phase%202/interview-mvp-verification.md)
+- [面試展示腳本](docs/Phase%202/interview-demo-script.md)

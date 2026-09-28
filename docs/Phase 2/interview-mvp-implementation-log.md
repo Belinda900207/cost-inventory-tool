@@ -325,3 +325,100 @@ PR-MVP-1 已建立可持久化的 Product 與 PurchaseBatch；本步在不擴充
 ### 狀態與證據信心
 
 本機 pure/service/API/regression 與品質檢查完成，PR CI 的真實 MySQL snapshot 與 browser regression 全綠。此 PR 信心 99/100，保留 1 分是最終比較 UI 與 clean-clone 驗收屬下一支 PR 邊界。
+
+合併補充：PR #16 以一般 merge commit `8c39cf676507cfe7531c18033313e15ee8b67fa9` 進入 `main`，所有分支保留；合併後 main run `36425691886` 四項全綠。PR-MVP-2 完成。
+
+## Step MVP-04：比較畫面與最終驗證
+
+### 這一步在做什麼
+
+像替已驗證的兩台成本計算器裝上同一個操作台：使用者從網頁建立商品與兩批進貨，輸入成交條件後並排看結果，再回頭確認貨架數量完全沒變。
+
+### 專業意義
+
+本步完成 browser-to-database 垂直切片，將 loading、validation、domain error 與 infrastructure error 分開呈現；Playwright 使用真實 API/MySQL，不以硬編碼畫面或 mock 取代整合證據。
+
+### 為什麼現在做
+
+PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API。最後才接 UI，可讓本 PR 專注互動、可及性、端到端流程與交付證據，不重新改動公式或 schema。
+
+### 執行前狀態
+
+- 分支：`feat/interview-cost-comparison-ui`。
+- 起點：乾淨且同步的 `main` commit `8c39cf6`。
+- PR #16 已一般 merge；合併後 main CI run `36425691886` 四項全綠。
+- 本機 Docker Desktop daemon 未啟動；Chromium 已下載但缺 `libnspr4.so` 系統 library。
+
+### 計畫
+
+- 先寫 component 與 Playwright 驗收，固定五種 UI 狀態及完整 golden flow。
+- 擴充 typed API client，新增試算表單與 FIFO／加權平均等權比較元件。
+- 補 README demo、最終 verification、3～5 分鐘 demo script、追問回答與核心概念。
+- commit/push 後在全新 `/tmp` remote clone 執行可行的 clean-clone 安裝、測試、build 與啟動 smoke。
+- 由 PR CI 真實執行 MySQL、migration 與已安裝系統依賴的 Playwright，保存 screenshot artifact。
+
+### 實際修改
+
+- `frontend/src/features/inventory/api.ts`：加入 simulation request/response types、安全 error code/details parser 與試算呼叫；不顯示 server message 或內部 detail。
+- `CostComparison.tsx`：兩個相同結構的 method cards，顯示單位／總成本、營收、毛利、毛利率、客觀差額、免責與未扣庫存聲明。
+- `InventoryPanel.tsx`：共用既有商品選擇，加入 client validation、loading、成功、庫存不足與一般失敗狀態。
+- `inventory.css`：桌面雙欄、窄螢幕單欄、清楚 focus 與等權卡片；沒有推薦 badge 或自動選取。
+- component tests：驗證五種狀態、字串金額、差額方向、免責、不推薦及試算不重新載入／改動庫存。
+- Playwright：從 UI 建商品與兩批，跑 1／25／31、連續十次 25，最後由 API 重新讀 MySQL-backed inventory 為 30 與 20／10，並截圖。
+- README、verification 與 demo script：記錄操作、證據、限制、3～5 分鐘講法、常見追問及十個核心概念。
+
+### 資料庫 migration
+
+無。UI 與驗證不改 schema；Alembic head 必須維持 `20260928_01_inventory`。
+
+### 執行指令
+
+- Targeted Vitest 先紅後綠；再執行 Oxlint、TypeScript、完整 Vitest、production build。
+- Backend regression 執行 Ruff lint／format、完整 pytest 與 Alembic heads。
+- Playwright 本機先在沙箱嘗試，再於允許 loopback 的環境重跑；真實 MySQL case未設旗標時明確 skip。
+- 功能 push 後再執行 clean clone；PR CI 執行全部四個 jobs 並上傳 `browser-evidence`。
+
+### 驗證結果
+
+- 預期紅燈：InventoryPanel targeted 7 tests 中 3 passed、4 failed；缺少 simulation API、表單、比較結果與狀態處理。
+- 實作後 targeted 最終 7 passed、0 failed。
+- Frontend 完整：14 passed、0 failed；Oxlint、TypeScript、production build 通過，22 modules；repository artifact／heuristic secret scan 通過。
+- Backend regression：39 passed、0 failed、3 skipped、1 warning；skip 是未啟用的 MySQL integration，warning 是既有 Starlette/httpx deprecation。
+- Ruff 45 files 通過；Alembic head 仍為 `20260928_01_inventory`。
+- 本機 Playwright：首次沙箱內 Vite 無法啟動；允許 loopback 後 real-stack 1 skipped，另一案例因本機缺 `libnspr4.so` 1 failed。未稱為通過，待 CI 安裝 dependencies 後重驗。
+- remote branch push 後，以全新隨機 `/tmp` clone 驗證；沒有沿用原工作樹的 virtualenv、node_modules 或 build output。
+- Clean clone backend：全新 virtualenv／dependency install 成功，Ruff 45 files、pytest 39 passed／3 skipped／1 warning、Alembic head `20260928_01_inventory`。
+- Clean clone frontend：`npm ci` 安裝 101 packages 且 0 vulnerabilities；Oxlint、TypeScript、Vitest 14 passed、build 22 modules、repository／bundle heuristic scan 全部通過。
+- Clean clone startup smoke：Uvicorn 正常啟動，`GET /health/live` 回 200 與 `{"status":"ok"}`，驗證後正常停止。
+- PR #17 第六次 run `36431017696` 四項全綠：backend 39 passed／3 opt-in skipped；Ruff 45 files；frontend 14 passed、build 22 modules；真實 MySQL integration 3 passed／0 skipped；real-stack Playwright 2 passed／0 skipped（17.2s）。
+- `browser-evidence` artifact ID `10974310555` 已下載核對 7 個 PNG，包含 healthy、q=1、q=25、十次試算後庫存不變、DB unavailable、backend unavailable 與 loading；大小 775,683 bytes，保留至 2026-10-12。
+
+### 失敗與修正
+
+- 新增第二個商品下拉後，舊測試用 option 名稱查詢變成不唯一；改以「試算商品」label 等待受控 select 值，測試與使用者操作邊界一致。
+- Vitest auto-mock 讓 `instanceof ApiRequestError` 不能可靠代表跨邊界錯誤；UI 改用只接受 string code 與安全 numeric details 的結構判斷，未知錯誤仍顯示泛化訊息。
+- TypeScript `erasableSyntaxOnly` 拒絕 constructor parameter properties；改成明確 readonly fields 與 assignments。
+- 本機 Playwright 缺 Chromium runtime `libnspr4.so`；沒有擅自安裝系統套件或把 real-stack skip 冒稱通過，交由既有 CI `playwright install --with-deps` 驗證。
+- 首次 clean-clone smoke 使用了相對於 repository root 的 virtualenv 路徑，但當時工作目錄已在 `backend/`，因此命令以 127 結束；修正為 `.venv/bin/uvicorn` 後服務成功啟動。第一次跨 sandbox probe 亦因網路 namespace 隔離無法連線，改在同一受控程序啟動、probe、停止後取得 200。兩次都屬執行環境／命令問題，不是應用測試通過。
+- PR #17 初次 CI run `36427767542` 的 backend、frontend、mysql-integration 通過，browser-integration 在 180 秒 timeout 失敗；artifact 的 page snapshot 停在商品已建立但庫存仍為 0，並非完整流程通過。
+- 原 UI 在建立成功 API 後、refresh 尚未完成前就先顯示成功訊息，E2E 可能在共用 `busy` 尚未解除時開始下一個 submit。修正為 refresh 完成後才公布成功，並讓 Playwright 在每次建立前確認按鈕 enabled、明確等待且驗證 POST 回 201；此判斷須由下一次 CI 實跑確認。
+- 第二次 CI run `36428650823` 仍在相同 page state 達到 180 秒 timeout，故上一項 race 只是改善點、不是已確認根因。下一輪把單次 POST 等待上限縮至 15 秒、送出前檢查原生 form validity，並繼承只含 request lifecycle 的 backend log；若仍失敗，CI 必須能區分未送 request 與後端未回 response。
+- 第三次 CI run `36429446385` 的 lifecycle log 證明 product POST 201 與 products／inventory refresh 均快速完成，之後沒有任何 purchase-batches request；問題已排除 backend／MySQL，縮至兩個 controlled selects 與第一個批次欄位之間。移除對已自動選中值的冗餘 `selectOption`，改以 product response ID 驗證兩個 select，並設定全域 15 秒 action timeout，避免單一步驟再次耗盡整體 180 秒。
+- 首次加入 action timeout 時放在 Playwright config 根層，TypeScript 立即以 TS2769 拒絕未知欄位；依 Playwright 型別移入 `use.actionTimeout` 後再重跑完整前端閘門。
+- 第四次 CI run `36430161546` 在 22.8 秒內給出明確 stack：`getByLabel('商品', { exact: true })` 找不到 element。該 label 包住 select 與 options，Playwright 的 label text 精確匹配不等於 combobox accessible name；這也確認先前三次的長等待根因。改用 `getByRole('combobox', { name: '商品', exact: true })`，仍以可及名稱定位且不依賴 CSS 結構。
+- 第五次 CI run `36430566144` 已由真實 browser 完成商品、20×80、10×100 與 q=1 API 200；失敗是 strict selector 找到兩個 `CAD 80.00`。q=1 時 FIFO 的單位／總成本同為 80.00，加權平均亦各有兩個 86.67，因此改為精確斷言各值 count=2，不把正確重複值誤判成單元素。
+
+### 我在面試時可以怎麼解釋
+
+- UI 不計算金額，只顯示 API 的字串結果，避免前後端各自實作公式。
+- FIFO 與加權平均使用相同結構、相同視覺層級；差額說明方向但不做政策推薦。
+- 使用者錯誤、庫存不足與後端故障分開處理，同時不把內部錯誤文字顯示到畫面。
+- Playwright 不是只看靜態畫面，它建立真實 MySQL 資料並在十次試算後重新讀取庫存。
+
+### 風險與未完成
+
+正式 auth、訂單、扣庫存、併發、audit、匯率與 Production 部署仍明確延後。功能 head CI 與 artifact 已完成；證據-only commit 的 CI、一般 merge 與合併後 main 證據完成前，不宣稱 MVP 最終完成。
+
+### 狀態與證據信心
+
+本機 component、品質門檻、backend regression、remote clean-clone、PR 真實 MySQL、real-stack Playwright 與 artifact 均完成。合併前信心 99/100；扣分僅為證據-only commit 的最終 CI、一般 merge 與合併後 main CI 尚待執行。
