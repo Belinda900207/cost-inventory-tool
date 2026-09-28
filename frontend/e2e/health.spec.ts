@@ -57,9 +57,10 @@ test.describe('real stack', () => {
       page.getByRole('button', { name: '建立商品' }).click(),
     ])
     expect(createProductResponse.status()).toBe(201)
+    const createdProduct = await createProductResponse.json() as { product_id: number }
     await expect(page.getByText('商品已建立。')).toBeVisible()
-    await page.getByLabel('商品', { exact: true }).selectOption({ label: productName })
-    await page.getByLabel('試算商品').selectOption({ label: productName })
+    await expect(page.getByLabel('商品', { exact: true })).toHaveValue(String(createdProduct.product_id))
+    await expect(page.getByLabel('試算商品')).toHaveValue(String(createdProduct.product_id))
 
     for (const item of [
       { quantity: '20', cost: '80', time: '2026-09-27T01:00' },

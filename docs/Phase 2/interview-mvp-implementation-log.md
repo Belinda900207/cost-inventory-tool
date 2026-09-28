@@ -401,6 +401,8 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 - PR #17 初次 CI run `36427767542` 的 backend、frontend、mysql-integration 通過，browser-integration 在 180 秒 timeout 失敗；artifact 的 page snapshot 停在商品已建立但庫存仍為 0，並非完整流程通過。
 - 原 UI 在建立成功 API 後、refresh 尚未完成前就先顯示成功訊息，E2E 可能在共用 `busy` 尚未解除時開始下一個 submit。修正為 refresh 完成後才公布成功，並讓 Playwright 在每次建立前確認按鈕 enabled、明確等待且驗證 POST 回 201；此判斷須由下一次 CI 實跑確認。
 - 第二次 CI run `36428650823` 仍在相同 page state 達到 180 秒 timeout，故上一項 race 只是改善點、不是已確認根因。下一輪把單次 POST 等待上限縮至 15 秒、送出前檢查原生 form validity，並繼承只含 request lifecycle 的 backend log；若仍失敗，CI 必須能區分未送 request 與後端未回 response。
+- 第三次 CI run `36429446385` 的 lifecycle log 證明 product POST 201 與 products／inventory refresh 均快速完成，之後沒有任何 purchase-batches request；問題已排除 backend／MySQL，縮至兩個 controlled selects 與第一個批次欄位之間。移除對已自動選中值的冗餘 `selectOption`，改以 product response ID 驗證兩個 select，並設定全域 15 秒 action timeout，避免單一步驟再次耗盡整體 180 秒。
+- 首次加入 action timeout 時放在 Playwright config 根層，TypeScript 立即以 TS2769 拒絕未知欄位；依 Playwright 型別移入 `use.actionTimeout` 後再重跑完整前端閘門。
 
 ### 我在面試時可以怎麼解釋
 
