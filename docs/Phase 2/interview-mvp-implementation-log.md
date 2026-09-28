@@ -236,3 +236,91 @@ FIFO 與加權平均都依賴批次時間、剩餘數量及精確成本；若資
 ### 狀態與證據信心
 
 本機 unit/API/component/品質檢查與 PR CI 全綠；乾淨 MySQL 8.4 已證明 migration、持久化、constraints 與重連，browser integration 也通過。現階段信心 98/100，保留 2 分是 MVP 尚未進入下一支成本計算 PR，這不屬於本 PR 邊界。
+
+合併補充：PR #15 以一般 merge commit `5d757b4aafac546808df654d0b33423d179a3929` 進入 `main`，所有遠端與本機分支均保留；合併後 main run `36387141160` 的 backend、frontend、mysql-integration、browser-integration 全綠。PR-MVP-1 完成。
+
+## Step MVP-03：成本引擎與無副作用試算 API
+
+### 這一步在做什麼
+
+像把兩台透明計算機接到同一份唯讀庫存快照：一台依最早批次逐層取用，另一台依剩餘數量計算權重；兩台同時回報結果，但都沒有改寫庫存的能力。
+
+### 專業意義
+
+將 Decimal 計算抽成不依賴 FastAPI 或 SQLAlchemy 的 pure module，可用固定輸入直接證明算法。HTTP service 只有唯讀 repository call，真實 MySQL test 再比較試算前後完整 row snapshot，避免只靠程式宣稱「沒有扣庫存」。
+
+### 為什麼現在做
+
+PR-MVP-1 已建立可持久化的 Product 與 PurchaseBatch；本步在不擴充 schema 的前提下完成面試核心價值，下一支 PR 才能安全地專注比較畫面與端到端展示。
+
+### 執行前狀態
+
+- 分支：`feat/interview-cost-simulation`。
+- 起點：乾淨且與遠端一致的 `main` commit `5d757b4`。
+- PR #15 已一般 merge；合併後 main CI run `36387141160` 四項全綠。
+- 持久化 schema 只有 `products`、`purchase_batches` 與 Alembic version；沒有 order 或 simulation history。
+
+### 已確認規則
+
+- FIFO 依 `purchased_at ASC, batch_id ASC`，略過零剩餘量，可跨批並在不足時整體失敗。
+- 加權平均使用剩餘數量權重，不是批次單價簡單平均。
+- Python 全程使用 Decimal；中間結果不先 round，response 邊界才以 `ROUND_HALF_UP` 顯示兩位。
+- 同一 response 並列兩種方法及客觀差額方向；相同時方向為 `equal`，不構成推薦。
+- 試算只讀、不保存、不建立訂單，不修改 Product 或 PurchaseBatch。
+
+### 計畫
+
+- 先建立 1／25／30／31 個、同時間排序、十次重跑與 rounding 的 executable acceptance tests。
+- 實作 framework-independent cost engine，再建立 simulation service、schemas、dependency 與 router。
+- 用 API tests 固定字串金額、安全錯誤 envelope 與 CAD／正數 validation。
+- 用隔離 MySQL 前後完整 row snapshot 與 table inventory 證明無副作用。
+
+### 實際修改
+
+- `app/costing/engine.py`：不可變 input/result dataclasses、FIFO、數量加權平均、營收／毛利／毛利率及絕對差額方向。
+- `app/simulations/service.py`：只呼叫 `get_inventory`，將 ORM batch 映射至 pure input，不執行 add、flush、commit 或 update。
+- `app/simulations/schemas.py`：正整數、正 Decimal、CAD-only request；所有金額與百分比在 response 邊界以字串兩位輸出。
+- `app/simulations/router.py`：新增 `POST /api/v1/simulations/cost`，商品不存在與庫存不足沿用安全 error envelope。
+- pure/service/API tests：固定 golden cases、同時刻 batch ID 次序、零庫存批次、簡單平均反例、十次 deterministic、無 mutation、round half up 與 validation。
+- MySQL integration：連續十次試算、剛好 30、超量 31，並比對完整批次 row snapshot 及資料表集合。
+- README 與 API 合約：補上試算端點、無副作用／不推薦說明，以及差額相等時的明確語意。
+
+### 資料庫 migration
+
+無。此 PR 刻意不新增資料表或欄位；新增 simulation/order/history schema 反而違反 MVP 的無持久化規則。
+
+### 執行指令
+
+- Targeted pytest：先執行三個新 test modules，確認 `app.costing` 不存在而產生 3 個預期 collection errors。
+- 實作後重跑 targeted pytest、完整 backend pytest、Ruff lint／format 與 `alembic heads`。
+- Frontend 雖無功能修改，仍執行 Oxlint、TypeScript、Vitest、production build 與 repository secret/artifact heuristic。
+- 真實 MySQL 與 Playwright 將由 PR CI 的隔離環境執行；skipped local integration 不列為通過。
+
+### 驗證結果
+
+- 預期紅燈：3 個 collection errors，原因是 `app.costing` 尚不存在。
+- 第一輪實作：12 passed、1 failed；失敗精確指出 recurring Decimal 被由 total 再除 quantity，造成最後一位中間精度漂移。
+- 修正為加權單位成本只計算一次並沿用後，targeted tests 13 passed、0 failed、1 個既有 warning。
+- 加入明確 `ROUND_HALF_UP` 邊界與 1 個商品完整顯示案例後，完整 backend：39 passed、0 failed、3 skipped、1 warning；三個 skip 均為未在本機啟用的隔離 MySQL tests。
+- Ruff：45 files lint／format passed；Alembic head 維持 `20260928_01_inventory`。
+- Frontend regression：10 passed；Oxlint、TypeScript、build 通過，21 modules；repository artifact／heuristic secret scan 通過。
+
+### 失敗與修正
+
+- Targeted 首輪揭露加權總成本乘上數量後，再反除數量重建單位成本，會因 Decimal context 對循環小數產生最末位差異。引擎改為只計算一次 `inventory_cost / available` 並把該精確中間值直接帶入 result；顯示值仍只在 API 邊界 round。
+- Ruff 發現一個 import block 排序及三個格式差異；只以 Ruff 做機械修正後重新以 check-only 驗證。
+- 嘗試啟動本機隔離 MySQL 時，WSL `docker` 不存在；依 README 改用 `docker.exe` 後，Docker Desktop Linux engine pipe 也未啟動。兩次均在建立 container 前失敗，沒有刪除或修改 volume；因此本機 integration 維持未通過，交由 PR CI 真實執行後再判定。
+
+### 我在面試時可以怎麼解釋
+
+- 計算引擎不需要 web server 或 database 就能測，這讓算法錯誤與整合錯誤可以分開定位。
+- 加權平均保留原始 Decimal 中間值，`86.67` 只是顯示，不會拿顯示後數字繼續算總成本。
+- 無副作用不只靠 code review：integration test 會把完整 MySQL rows 在十次 API 呼叫前後逐欄比較。
+
+### 風險與未完成
+
+此 PR 不做比較 UI、正式訂單、扣庫存、auth、匯率或任何新 schema。真實 MySQL 無副作用與 browser regression 尚待 PR CI 執行。
+
+### 狀態與證據信心
+
+本機 pure/service/API/regression 與品質檢查完成；CI 前信心 94/100，扣分是 MySQL snapshot test 尚未在乾淨 CI runner 執行，且最終比較 UI 屬下一支 PR。
