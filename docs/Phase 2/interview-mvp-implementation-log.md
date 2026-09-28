@@ -150,3 +150,87 @@ PR-MVP-0 不含任何業務實作；功能仍須由後三支 PR 完成。
 ### 狀態與證據信心
 
 PR-MVP-0 實作與首輪 CI 完成；待 evidence commit 的最終 CI 與合併後 main 驗證。現階段信心 99/100，扣分是尚未取得合併後 main 證據。
+
+合併補充：PR #14 以 merge commit `9de3cb18004afb5132e94d2c8050ab515f33a98e` 進入 `main`；合併後 run `36381274891` 的 backend、frontend、mysql-integration、browser-integration 全綠。PR-MVP-0 完成，證據信心 100/100。
+
+## Step MVP-02：商品、進貨批次與庫存基礎
+
+### 這一步在做什麼
+
+像先建立有編號的貨架與入庫單：商品是貨架標籤，每次進貨是獨立批次，庫存畫面把同一商品的批次加總但仍保留來源。
+
+### 專業意義
+
+以 Alembic 建立可重建 schema，並用 repository／service／router 分層隔離 SQL、業務規則與 HTTP。資料真的保存於 MySQL，不能以記憶體假資料代替。
+
+### 為什麼現在做
+
+FIFO 與加權平均都依賴批次時間、剩餘數量及精確成本；若資料模型未先固定，後續計算無法可靠驗證。
+
+### 執行前狀態
+
+- 分支：`feat/interview-inventory-foundation`。
+- 起點：乾淨且已同步的 `main` commit `9de3cb1`。
+- PR-MVP-0 與合併後 main 四項 CI 均全綠。
+- schema 與 Alembic history 在本步開始前仍為空。
+
+### 計畫
+
+- 先加入 service、API、migration metadata、MySQL persistence 與 React component 驗收測試，確認預期紅燈。
+- 建立 Product/PurchaseBatch models、migration、repository、service、router 與安全 domain errors。
+- 建立最小商品／批次輸入及庫存檢視 UI。
+- 本機完成不需秘密的 checks；真實 MySQL migration/persistence 由隔離 CI 驗證。
+
+### 實際修改
+
+- `app/inventory/models.py`：建立 Product 與 PurchaseBatch ORM；金額為 `DECIMAL(19,6)`，時間採 UTC convention，加入正數、剩餘量、CAD、FK、unique 與查詢 index。
+- `migrations/versions/20260928_01_inventory.py`：第一個正式 revision，可由空資料庫建立及 downgrade 兩張表。
+- `app/inventory/repository.py`：集中 SQLAlchemy add、transaction 與 deterministic inventory queries。
+- `app/inventory/service.py`：商品名稱 trim＋Unicode NFKC＋`casefold()`，建立商品／批次並處理 unique conflict。
+- `app/inventory/router.py`、`schemas.py`、`dependencies.py`：五個 API、Decimal 字串、UTC response 與 service dependency。
+- `app/observability.py`：擴充既有安全 envelope，支援受控 domain error code 及安全整數 details；既有錯誤合約不變。
+- `app/db.py`：每個 request 取得短生命週期 SQLAlchemy Session，DB connection session 固定 UTC。
+- backend unit/API/migration tests：名稱正規化、unique rollback、缺少商品、validation、字串金額及 metadata/revision。
+- MySQL integration：空 DB upgrade、兩批持久化、重連仍為 30、資料庫 constraints 直接拒絕壞資料、最後只清理自己建立的測試 rows。
+- `run_browser_backend.py`：隔離 DB 身分檢查通過後先執行 `alembic upgrade head`，避免 health 正常但業務表不存在的假綠燈。
+- `frontend/src/features/inventory/`：API client、商品與批次表單、總庫存／批次列表、錯誤狀態、3 個 component tests。
+- `App.tsx` 與 CSS：保留 health 狀態並掛載最小 inventory UI；health tests mock 子元件以維持單元邊界。
+- README：clone 流程加入 `alembic upgrade head`，列出 MVP API 與未實作 auth／扣庫存警告。
+
+### 執行指令
+
+- Targeted pytest 與 Vitest：先執行新測試，證明模組尚不存在的預期紅燈。
+- `ruff check --fix`／`ruff format`：只整理 import 與機械格式，再以無 `--fix` 的指令重驗。
+- backend `ruff check . ../scripts`、`ruff format --check . ../scripts`、`pytest -q`、`alembic heads`。
+- frontend `npm run lint`、`npm run typecheck`、`npm test`、`npm run build`。
+- 真實 migration／MySQL constraint／持久化測試已寫為 opt-in integration，將由 PR CI 的隔離 MySQL job 執行。
+
+### 驗證結果
+
+- 預期紅燈：backend 3 個 collection errors（`app.inventory` 尚不存在）；frontend 1 failed suite（`InventoryPanel` 尚不存在）。
+- Targeted backend 完成後：7 passed、0 failed、1 warning。
+- 完整 backend：24 passed、0 failed、2 skipped、1 warning；兩個 skip 是未在本機啟用的隔離 MySQL tests，沒有稱為通過。
+- Ruff：34 files lint／format passed；Alembic head 為 `20260928_01_inventory`。
+- Frontend：10 passed、0 failed；Oxlint、TypeScript 與 production build 通過，21 modules。
+- 真實 MySQL upgrade、constraints、持久化及 PR browser regression 尚待 CI。
+
+### 失敗與修正
+
+- 第一輪 Ruff 發現 service 少匯入 `UTC`，以及 6 個機械格式差異；補正 UTC conversion 後用 Ruff 整理並重驗全綠。
+- Oxlint 指出 effect 直接呼叫 state-updating helper 可能造成 cascading render；改為外部 API Promise 完成後才更新 state，warning 消失。
+- Staged diff 審查發現 browser helper 原本只啟動 API、不套用 schema；加入受控 test DB migration，成功才啟動 Uvicorn。
+- 沙箱內 targeted pytest 在 4 個 service tests 後卡於既有 TestClient 環境限制；停止該次後在核准環境重跑 7 passed。沒有把半截輸出算成功。
+
+### 我在面試時可以怎麼解釋
+
+- 我先寫會失敗的驗收測試，讓 schema、API 與 UI 的完成條件可以被執行。
+- 商品與批次分開保存，才能重現 FIFO 次序與加權平均的數量權重。
+- 庫存總量是批次剩餘量的查詢結果，不額外維護容易失同步的總數欄位。
+
+### 風險與未完成
+
+此 PR 不做成本試算、訂單、扣庫存、auth 或併發控制。
+
+### 狀態與證據信心
+
+本機 unit/API/component/品質檢查完成；真實 MySQL 與 CI 尚待執行。現階段信心 90/100，主要扣分是 migration 與 constraints 尚未在乾淨 MySQL 8.4 runner 實跑。

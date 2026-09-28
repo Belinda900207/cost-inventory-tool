@@ -1,4 +1,4 @@
-main { max-width: 680px; margin: 3rem auto; padding: 1.5rem; }
+main { max-width: 960px; margin: 3rem auto; padding: 1.5rem; }
 h1 { font-size: 1.8rem; }
 section { background: white; padding: 1.5rem; border: 1px solid #cbd5df; border-radius: 8px; margin: 1.5rem 0; }
 dl > div { display: flex; justify-content: space-between; gap: 1rem; padding: .5rem 0; }

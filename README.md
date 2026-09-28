@@ -4,7 +4,7 @@
 
 > **安全邊界：**正式驗證與授權尚未實作，本版本只能用於本機及受控展示，不可直接公開部署。
 
-目前沒有商品、進貨、匯率、庫存、成本、訂單或正式登入功能，也沒有業務資料表。Auth 只保留介面；`login`／`me` 尚未上線。
+目前第二階段正在加入商品、CAD 進貨批次、庫存查詢與成本比較。正式訂單、扣庫存、匯率及登入尚未上線；Auth 仍只保留介面，`login`／`me` 不存在。
 
 ## 需求
 
@@ -27,6 +27,7 @@ npm --prefix frontend ci
 
 python3 scripts/init_dev_env.py
 docker compose up -d --wait
+(cd backend && .venv/bin/python -m alembic upgrade head)
 ```
 
 `init_dev_env.py` 只在 `.env` 不存在時建立隨機本機密碼，權限為 `0600`；已存在時不讀取、不覆寫。不要提交 `.env`，也不要把值貼到 issue、PR 或 log。
@@ -75,6 +76,20 @@ docker compose stop
 | `GET /health` | 第一版相容合約 | `503 {"status":"unhealthy","database":"unavailable"}` |
 
 每個 response 都有 `X-Request-ID`。一般錯誤 body 也帶同一 ID。自訂 ID 只接受單一、1–64 字元的英數、底線或連字號；log 不記 query、request body、例外文字或完整 DB URL。
+
+## 面試 MVP API
+
+以下端點目前沒有正式驗證或授權，只能用於本機及受控 CI：
+
+| 方法／路徑 | 用途 |
+| --- | --- |
+| `POST /api/v1/products` | 建立不分大小寫防重的商品 |
+| `GET /api/v1/products` | 查詢商品 |
+| `POST /api/v1/purchase-batches` | 新增正整數數量、`DECIMAL(19,6)` CAD 成本的進貨批次 |
+| `GET /api/v1/inventory` | 查詢全部商品總庫存與批次 |
+| `GET /api/v1/inventory/{product_id}` | 查詢單一商品庫存與批次 |
+
+目前沒有商品改名、刪除、正式訂單或扣庫存；批次剩餘數量建立後不會因本階段操作改變。
 
 ## 驗證
 

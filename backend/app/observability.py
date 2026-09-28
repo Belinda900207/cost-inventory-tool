@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from time import perf_counter
 from uuid import uuid4
@@ -21,22 +22,48 @@ if not logger.handlers:
 logger.setLevel(logging.INFO)
 
 
+class ApiError(Exception):
+    def __init__(
+        self,
+        status: int,
+        code: str,
+        message: str,
+        details: Mapping[str, str | int] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status = status
+        self.code = code
+        self.message = message
+        self.details = details
+
+
 def error_response(
-    request: Request, status: int, code: str, message: str
+    request: Request,
+    status: int,
+    code: str,
+    message: str,
+    details: Mapping[str, str | int] | None = None,
 ) -> JSONResponse:
+    error: dict[str, object] = {
+        "code": code,
+        "message": message,
+        "request_id": request.state.request_id,
+    }
+    if details is not None:
+        error["details"] = dict(details)
     return JSONResponse(
         status_code=status,
-        content={
-            "error": {
-                "code": code,
-                "message": message,
-                "request_id": request.state.request_id,
-            }
-        },
+        content={"error": error},
     )
 
 
 def install_observability(app: FastAPI) -> None:
+    @app.exception_handler(ApiError)
+    async def api_error(request: Request, exc: ApiError):
+        return error_response(
+            request, exc.status, exc.code, exc.message, details=exc.details
+        )
+
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, _exc: RequestValidationError):
         return error_response(request, 422, "validation_error", "Invalid request")

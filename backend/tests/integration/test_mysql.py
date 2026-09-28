@@ -64,7 +64,7 @@ def test_real_mysql_readiness_restart_and_outage(monkeypatch):
             timeout=20,
         )
         assert result.returncode == 0, "alembic current failed (details withheld)"
-        print("alembic current connected successfully; no revisions in stage one")
+        print("alembic current connected successfully; revision state inspected")
         with TestClient(create_app()) as client:
             assert client.get("/health/ready").status_code == 200
             compose("restart", "db")

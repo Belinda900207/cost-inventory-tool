@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getHealth } from './api/client'
 import type { HealthState } from './api/client'
+import InventoryPanel from './features/inventory/InventoryPanel'
 import './App.css'
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
         setState({ kind: 'loading' })
         setAttempt((value) => value + 1)
       }}>重新檢查</button>
+      <InventoryPanel />
     </main>
   )
 }
