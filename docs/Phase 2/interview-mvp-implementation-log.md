@@ -114,7 +114,10 @@ PR-MVP-1 的 schema 與 PR-MVP-2 的計算結果都依賴固定的欄位、精�
 - `git diff --cached --find-renames --name-status`：確認七份舊文件都被辨識為 R100 rename。
 - `git diff --cached --check` 與完整 cached diff：檢查 whitespace 與即將提交的實際內容。
 - staged path 與強秘密模式掃描：只輸出違規路徑或命中檔名，不讀 ignored `.env`。
-- commit、PR 與 CI 指令會在完成後繼續補記。
+- `git commit -m "docs: define interview MVP contract"`：建立首個文件 commit `a3ef213`。
+- `git push -u origin docs/interview-mvp-contract`：推送單一目的分支。
+- `gh pr create`：建立 PR #14，描述包含 Why、What、How to verify、Risks、Boundaries 與 Evidence。
+- `gh pr checks 14 --watch`：監看四個遠端品質閘門。
 
 ### 驗證結果
 
@@ -126,7 +129,9 @@ PR-MVP-1 的 schema 與 PR-MVP-2 的計算結果都依賴固定的欄位、精�
 - Frontend Oxlint、TypeScript 與 production build 通過；Vitest 7 passed、0 failed。
 - 暫存區共 13 個結果路徑：README、七個 R100 rename、五份新文件；493 insertions、8 deletions。
 - cached whitespace、禁止的 env／產物路徑及強秘密模式檢查全部無命中。
-- PR CI 尚未建立，因此 MySQL integration 與 Playwright 仍待遠端實跑。
+- PR：https://github.com/Belinda900207/cost-inventory-tool/pull/14 。
+- CI：https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36380890716 。
+- 首輪 CI 全綠：backend 25 秒、frontend 18 秒、mysql-integration 1 分 9 秒、browser-integration 1 分 36 秒。
 
 ### 失敗與修正
 
@@ -144,4 +149,4 @@ PR-MVP-0 不含任何業務實作；功能仍須由後三支 PR 完成。
 
 ### 狀態與證據信心
 
-本機文件與既有品質檢查完成；待精確 staging、commit、PR CI 與合併證據。現階段信心 95/100，扣分是遠端 MySQL／browser jobs 尚未對本分支實跑。
+PR-MVP-0 實作與首輪 CI 完成；待 evidence commit 的最終 CI 與合併後 main 驗證。現階段信心 99/100，扣分是尚未取得合併後 main 證據。
