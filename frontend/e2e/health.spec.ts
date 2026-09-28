@@ -50,7 +50,10 @@ test.describe('real stack', () => {
 
     const productName = `商品 A ${Date.now()}`
     await page.getByLabel('商品名稱').fill(productName)
+    const createProductResponse = page.waitForResponse((response) =>
+      response.url().endsWith('/api/v1/products') && response.request().method() === 'POST')
     await page.getByRole('button', { name: '建立商品' }).click()
+    expect((await createProductResponse).status()).toBe(201)
     await expect(page.getByText('商品已建立。')).toBeVisible()
     await page.getByLabel('商品', { exact: true }).selectOption({ label: productName })
     await page.getByLabel('試算商品').selectOption({ label: productName })
@@ -62,7 +65,12 @@ test.describe('real stack', () => {
       await page.getByLabel('進貨數量').fill(item.quantity)
       await page.getByLabel('CAD 單位成本').fill(item.cost)
       await page.getByLabel('進貨時間').fill(item.time)
-      await page.getByRole('button', { name: '新增進貨批次' }).click()
+      const createBatchButton = page.getByRole('button', { name: '新增進貨批次' })
+      await expect(createBatchButton).toBeEnabled()
+      const createBatchResponse = page.waitForResponse((response) =>
+        response.url().endsWith('/api/v1/purchase-batches') && response.request().method() === 'POST')
+      await createBatchButton.click()
+      expect((await createBatchResponse).status()).toBe(201)
       await expect(page.getByText('進貨批次已新增。')).toBeVisible()
     }
     const inventoryArticle = page.locator('.inventory-list article').filter({ hasText: productName })

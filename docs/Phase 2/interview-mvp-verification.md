@@ -15,7 +15,7 @@
 | [#14](https://github.com/Belinda900207/cost-inventory-tool/pull/14) | `docs/interview-mvp-contract` | `a3ef213`、`d4a7eab` | 已合併；main run `36381274891` 全綠 |
 | [#15](https://github.com/Belinda900207/cost-inventory-tool/pull/15) | `feat/interview-inventory-foundation` | `2bc3da9`、`0978861`、`3738ba8` | 已合併；main run `36387141160` 全綠 |
 | [#16](https://github.com/Belinda900207/cost-inventory-tool/pull/16) | `feat/interview-cost-simulation` | `b95e916`、`c86f7ae` | 已合併；main run `36425691886` 全綠 |
-| PR-MVP-3 | `feat/interview-cost-comparison-ui` | `faf1de8` | 比較 UI 與 clean clone 已完成；PR／CI 待建立與執行 |
+| [#17](https://github.com/Belinda900207/cost-inventory-tool/pull/17) | `feat/interview-cost-comparison-ui` | `faf1de8`、`6de3030` | 比較 UI 與 clean clone 已完成；初次 CI browser 失敗，修正與重驗中 |
 
 ## 資料庫與 migration
 

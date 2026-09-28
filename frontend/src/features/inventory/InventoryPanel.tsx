@@ -77,8 +77,8 @@ export default function InventoryPanel() {
     try {
       await createProduct(productName)
       setProductName('')
-      setMessage('商品已建立。')
       await load()
+      setMessage('商品已建立。')
     } catch {
       setMessage('商品建立失敗；名稱可能已存在或格式不正確。')
     } finally {
@@ -101,8 +101,8 @@ export default function InventoryPanel() {
       setQuantity('')
       setUnitCost('')
       setPurchasedAt('')
-      setMessage('進貨批次已新增。')
       await load()
+      setMessage('進貨批次已新增。')
     } catch {
       setMessage('進貨建立失敗；請確認商品、正整數數量、CAD 成本與時間。')
     } finally {
