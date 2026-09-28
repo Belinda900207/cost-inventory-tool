@@ -1,6 +1,6 @@
 # 三天面試 MVP 最終驗證
 
-狀態：PR-MVP-3 施工中；所有「待 PR CI」項目必須取得實際證據後才會改為通過。
+狀態：PR-MVP-3 clean-clone 驗收已完成，PR CI 尚待實際執行；所有「待 PR CI」項目必須取得證據後才會改為通過。
 
 ## 可驗證範圍
 
@@ -15,7 +15,7 @@
 | [#14](https://github.com/Belinda900207/cost-inventory-tool/pull/14) | `docs/interview-mvp-contract` | `a3ef213`、`d4a7eab` | 已合併；main run `36381274891` 全綠 |
 | [#15](https://github.com/Belinda900207/cost-inventory-tool/pull/15) | `feat/interview-inventory-foundation` | `2bc3da9`、`0978861`、`3738ba8` | 已合併；main run `36387141160` 全綠 |
 | [#16](https://github.com/Belinda900207/cost-inventory-tool/pull/16) | `feat/interview-cost-simulation` | `b95e916`、`c86f7ae` | 已合併；main run `36425691886` 全綠 |
-| PR-MVP-3 | `feat/interview-cost-comparison-ui` | 待填 | 比較 UI、完整 browser flow、clean clone 與本文件 |
+| PR-MVP-3 | `feat/interview-cost-comparison-ui` | `faf1de8` | 比較 UI 與 clean clone 已完成；PR／CI 待建立與執行 |
 
 ## 資料庫與 migration
 
@@ -79,7 +79,16 @@ PR-MVP-3 Playwright 會保存：健康狀態、1 個商品成本比較、25 個�
 
 ## Clean-clone 驗收
 
-待功能 commit push 後，從 remote branch clone 至新的 `/tmp` 目錄，依 README 執行 Python/Node 安裝、Ruff、pytest、Oxlint、typecheck、Vitest、build、Alembic head 與 application import/start smoke。Docker daemon 未啟動時，不把本機 migration upgrade 或 MySQL 啟動稱為通過；由隔離 CI 補足真實 MySQL 證據。
+已從 remote `feat/interview-cost-comparison-ui` clone 至全新的隨機 `/tmp` 目錄，沒有沿用原工作樹的 `.venv`、`node_modules` 或 build output。實際結果：
+
+- 全新 Python virtualenv 安裝成功；Ruff lint／format 45 files 通過。
+- pytest 39 passed、3 個 opt-in MySQL tests skipped、1 個既有 deprecation warning。
+- Alembic head 為 `20260928_01_inventory`。
+- `npm ci` 安裝 101 packages，audit 為 0 vulnerabilities。
+- Oxlint、TypeScript、Vitest 14 tests、production build 22 modules 與 repository／bundle heuristic scan 全部通過。
+- Uvicorn 從 clean clone 啟動成功，`GET /health/live` 回 `200` 與 `{"status":"ok"}`，隨後正常停止。
+
+本機 Docker daemon 未啟動，因此 clean clone 的 migration upgrade、真實 MySQL 與 real-stack browser 沒有在本機重複執行，也不稱為通過；由隔離 PR CI 補足這三項證據。
 
 ## 已完成與未完成
 
@@ -89,4 +98,4 @@ PR-MVP-3 Playwright 會保存：健康狀態、1 個商品成本比較、25 個�
 
 ## 完成度與信心
 
-PR-MVP-3 CI 與 clean-clone 證據完成前：三天面試 MVP 94%；證據信心 92/100。扣分是完整 real-stack browser、artifact 與 clean-clone 尚待實跑，不是已知成本公式缺陷。
+PR-MVP-3 clean clone 完成、CI 尚待執行：三天面試 MVP 96%；證據信心 95/100。扣分是完整 real-stack browser、PR MySQL 與 screenshot artifact 尚待 CI 實跑，不是已知成本公式缺陷。

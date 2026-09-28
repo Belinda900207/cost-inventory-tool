@@ -386,6 +386,10 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 - Backend regression：39 passed、0 failed、3 skipped、1 warning；skip 是未啟用的 MySQL integration，warning 是既有 Starlette/httpx deprecation。
 - Ruff 45 files 通過；Alembic head 仍為 `20260928_01_inventory`。
 - 本機 Playwright：首次沙箱內 Vite 無法啟動；允許 loopback 後 real-stack 1 skipped，另一案例因本機缺 `libnspr4.so` 1 failed。未稱為通過，待 CI 安裝 dependencies 後重驗。
+- remote branch push 後，以全新隨機 `/tmp` clone 驗證；沒有沿用原工作樹的 virtualenv、node_modules 或 build output。
+- Clean clone backend：全新 virtualenv／dependency install 成功，Ruff 45 files、pytest 39 passed／3 skipped／1 warning、Alembic head `20260928_01_inventory`。
+- Clean clone frontend：`npm ci` 安裝 101 packages 且 0 vulnerabilities；Oxlint、TypeScript、Vitest 14 passed、build 22 modules、repository／bundle heuristic scan 全部通過。
+- Clean clone startup smoke：Uvicorn 正常啟動，`GET /health/live` 回 200 與 `{"status":"ok"}`，驗證後正常停止。
 
 ### 失敗與修正
 
@@ -393,6 +397,7 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 - Vitest auto-mock 讓 `instanceof ApiRequestError` 不能可靠代表跨邊界錯誤；UI 改用只接受 string code 與安全 numeric details 的結構判斷，未知錯誤仍顯示泛化訊息。
 - TypeScript `erasableSyntaxOnly` 拒絕 constructor parameter properties；改成明確 readonly fields 與 assignments。
 - 本機 Playwright 缺 Chromium runtime `libnspr4.so`；沒有擅自安裝系統套件或把 real-stack skip 冒稱通過，交由既有 CI `playwright install --with-deps` 驗證。
+- 首次 clean-clone smoke 使用了相對於 repository root 的 virtualenv 路徑，但當時工作目錄已在 `backend/`，因此命令以 127 結束；修正為 `.venv/bin/uvicorn` 後服務成功啟動。第一次跨 sandbox probe 亦因網路 namespace 隔離無法連線，改在同一受控程序啟動、probe、停止後取得 200。兩次都屬執行環境／命令問題，不是應用測試通過。
 
 ### 我在面試時可以怎麼解釋
 
@@ -403,8 +408,8 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 
 ### 風險與未完成
 
-正式 auth、訂單、扣庫存、併發、audit、匯率與 Production 部署仍明確延後。PR CI、artifact、clean clone 與合併後 main 證據完成前，不宣稱 MVP 最終完成。
+正式 auth、訂單、扣庫存、併發、audit、匯率與 Production 部署仍明確延後。PR CI、artifact 與合併後 main 證據完成前，不宣稱 MVP 最終完成。
 
 ### 狀態與證據信心
 
-本機 component、品質門檻與 backend regression 完成；本機 browser 受系統 library 限制。CI 前信心 92/100，扣分是 real-stack Playwright、clean clone 與最終 CI 尚待實跑。
+本機 component、品質門檻、backend regression 與 remote clean-clone 驗收完成；本機 browser 受系統 library 限制。PR CI 前信心 95/100，扣分是 real-stack Playwright、真實 MySQL 與最終 artifact 尚待 CI 實跑。
