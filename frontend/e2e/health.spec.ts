@@ -59,7 +59,8 @@ test.describe('real stack', () => {
     expect(createProductResponse.status()).toBe(201)
     const createdProduct = await createProductResponse.json() as { product_id: number }
     await expect(page.getByText('商品已建立。')).toBeVisible()
-    await expect(page.getByLabel('商品', { exact: true })).toHaveValue(String(createdProduct.product_id))
+    await expect(page.getByRole('combobox', { name: '商品', exact: true }))
+      .toHaveValue(String(createdProduct.product_id))
     await expect(page.getByLabel('試算商品')).toHaveValue(String(createdProduct.product_id))
 
     for (const item of [

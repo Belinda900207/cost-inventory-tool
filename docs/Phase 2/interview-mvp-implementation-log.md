@@ -403,6 +403,7 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 - 第二次 CI run `36428650823` 仍在相同 page state 達到 180 秒 timeout，故上一項 race 只是改善點、不是已確認根因。下一輪把單次 POST 等待上限縮至 15 秒、送出前檢查原生 form validity，並繼承只含 request lifecycle 的 backend log；若仍失敗，CI 必須能區分未送 request 與後端未回 response。
 - 第三次 CI run `36429446385` 的 lifecycle log 證明 product POST 201 與 products／inventory refresh 均快速完成，之後沒有任何 purchase-batches request；問題已排除 backend／MySQL，縮至兩個 controlled selects 與第一個批次欄位之間。移除對已自動選中值的冗餘 `selectOption`，改以 product response ID 驗證兩個 select，並設定全域 15 秒 action timeout，避免單一步驟再次耗盡整體 180 秒。
 - 首次加入 action timeout 時放在 Playwright config 根層，TypeScript 立即以 TS2769 拒絕未知欄位；依 Playwright 型別移入 `use.actionTimeout` 後再重跑完整前端閘門。
+- 第四次 CI run `36430161546` 在 22.8 秒內給出明確 stack：`getByLabel('商品', { exact: true })` 找不到 element。該 label 包住 select 與 options，Playwright 的 label text 精確匹配不等於 combobox accessible name；這也確認先前三次的長等待根因。改用 `getByRole('combobox', { name: '商品', exact: true })`，仍以可及名稱定位且不依賴 CSS 結構。
 
 ### 我在面試時可以怎麼解釋
 
