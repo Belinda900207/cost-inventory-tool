@@ -1,6 +1,6 @@
 # 三天面試 MVP 最終驗證
 
-狀態：PR-MVP-3 clean-clone 驗收已完成，PR CI 尚待實際執行；所有「待 PR CI」項目必須取得證據後才會改為通過。
+狀態：PR-MVP-3 功能 head `3b219b6` 的四個 PR CI jobs 全綠，clean-clone 與 browser artifact 已核對；最終證據 commit、合併及合併後 main CI 尚待完成。
 
 ## 可驗證範圍
 
@@ -15,7 +15,7 @@
 | [#14](https://github.com/Belinda900207/cost-inventory-tool/pull/14) | `docs/interview-mvp-contract` | `a3ef213`、`d4a7eab` | 已合併；main run `36381274891` 全綠 |
 | [#15](https://github.com/Belinda900207/cost-inventory-tool/pull/15) | `feat/interview-inventory-foundation` | `2bc3da9`、`0978861`、`3738ba8` | 已合併；main run `36387141160` 全綠 |
 | [#16](https://github.com/Belinda900207/cost-inventory-tool/pull/16) | `feat/interview-cost-simulation` | `b95e916`、`c86f7ae` | 已合併；main run `36425691886` 全綠 |
-| [#17](https://github.com/Belinda900207/cost-inventory-tool/pull/17) | `feat/interview-cost-comparison-ui` | `faf1de8`、`6de3030` | 比較 UI 與 clean clone 已完成；初次 CI browser 失敗，修正與重驗中 |
+| [#17](https://github.com/Belinda900207/cost-inventory-tool/pull/17) | `feat/interview-cost-comparison-ui` | `faf1de8`…`3b219b6` | 功能、clean clone 與 run [`36431017696`](https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36431017696) 四項全綠；證據 commit 待重驗 |
 
 ## 資料庫與 migration
 
@@ -65,17 +65,27 @@ PR #16 的 MySQL integration 在真實 MySQL 8.4 中：
 
 | 層級 | 本機結果 | CI／限制 |
 | --- | --- | --- |
-| Backend pytest | 39 passed、3 skipped、1 warning | skip 是三支 opt-in MySQL tests；既有 Starlette/httpx deprecation warning |
-| Ruff | 45 files lint／format passed | 待 PR-MVP-3 CI |
-| Frontend Vitest | 14 passed | 待 PR-MVP-3 CI |
-| Oxlint／TypeScript／build | passed；22 modules | 待 PR-MVP-3 CI |
-| MySQL integration | 本機 Docker Desktop daemon 未啟動，未通過 | PR #16 已真實通過；PR-MVP-3 CI 待跑 |
-| Playwright | 本機缺 `libnspr4.so`；real-stack 明確 skip，另一案例 failed，未稱為通過 | PR-MVP-3 CI 會安裝 Chromium dependencies 並執行 real stack |
-| Repository scan | tracked artifact 與 bundle heuristic secret scan passed | 待 PR-MVP-3 CI |
+| Backend pytest | 39 passed、3 skipped、1 warning | CI 同結果；skip 僅為三支另由 MySQL job 執行的 opt-in tests |
+| Ruff | 45 files lint／format passed | CI 45 files passed |
+| Frontend Vitest | 14 passed | CI 14 passed |
+| Oxlint／TypeScript／build | passed；22 modules | CI passed；22 modules |
+| MySQL integration | 本機 Docker Desktop daemon 未啟動，未通過 | CI 真實 MySQL 8.4：3 passed、0 skipped、1 warning |
+| Playwright | 本機缺 `libnspr4.so`，未通過 | CI 安裝 Chromium dependencies：2 passed、0 skipped，17.2s |
+| Repository scan | tracked artifact 與 bundle heuristic secret scan passed | CI passed |
 
 ## Browser 與截圖證據
 
-PR-MVP-3 Playwright 會保存：健康狀態、1 個商品成本比較、25 個跨批比較、十次試算後庫存不變、資料庫故障及後端斷線等截圖。CI artifact 名稱為 `browser-evidence`，保留 14 天。最終 run URL 與實際檔名待 CI 後填入。
+PR #17 run [`36431017696`](https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36431017696) 的 real-stack Playwright 為 2 passed、0 skipped。它建立真實 MySQL 商品與兩批、驗證 q=1／25／31、連續十次試算後 inventory 仍為 30 且批次仍為 20／10，也實際停止／恢復 DB 及停止 API 驗證錯誤畫面。
+
+[`browser-evidence` artifact](https://github.com/Belinda900207/cost-inventory-tool/actions/runs/36431017696/artifacts/10974310555)（ID `10974310555`、775,683 bytes、保留至 2026-10-12）已下載核對，共 7 個 PNG：
+
+- `healthy.png`
+- `cost-comparison-1.png`
+- `cost-comparison-25.png`
+- `inventory-unchanged.png`
+- `database-unavailable.png`
+- `backend-unavailable.png`
+- `loading.png`
 
 ## Clean-clone 驗收
 
@@ -88,7 +98,7 @@ PR-MVP-3 Playwright 會保存：健康狀態、1 個商品成本比較、25 個�
 - Oxlint、TypeScript、Vitest 14 tests、production build 22 modules 與 repository／bundle heuristic scan 全部通過。
 - Uvicorn 從 clean clone 啟動成功，`GET /health/live` 回 `200` 與 `{"status":"ok"}`，隨後正常停止。
 
-本機 Docker daemon 未啟動，因此 clean clone 的 migration upgrade、真實 MySQL 與 real-stack browser 沒有在本機重複執行，也不稱為通過；由隔離 PR CI 補足這三項證據。
+本機 Docker daemon 未啟動，因此 clean clone 的 migration upgrade、真實 MySQL 與 real-stack browser 沒有在本機重複執行，也不稱為本機通過；已由上述隔離 PR CI 的 MySQL 與 browser jobs 補足證據。
 
 ## 已完成與未完成
 
@@ -98,4 +108,4 @@ PR-MVP-3 Playwright 會保存：健康狀態、1 個商品成本比較、25 個�
 
 ## 完成度與信心
 
-PR-MVP-3 clean clone 完成、CI 尚待執行：三天面試 MVP 96%；證據信心 95/100。扣分是完整 real-stack browser、PR MySQL 與 screenshot artifact 尚待 CI 實跑，不是已知成本公式缺陷。
+功能 head、clean clone、真實 MySQL、real-stack browser 與 artifact 均完成：三天面試 MVP 99%；證據信心 99/100。剩餘 1% 是證據-only commit 的最終 CI、一般 merge 與合併後 main CI 尚未完成，不是已知功能缺陷。

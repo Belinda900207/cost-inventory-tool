@@ -390,6 +390,8 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 - Clean clone backend：全新 virtualenv／dependency install 成功，Ruff 45 files、pytest 39 passed／3 skipped／1 warning、Alembic head `20260928_01_inventory`。
 - Clean clone frontend：`npm ci` 安裝 101 packages 且 0 vulnerabilities；Oxlint、TypeScript、Vitest 14 passed、build 22 modules、repository／bundle heuristic scan 全部通過。
 - Clean clone startup smoke：Uvicorn 正常啟動，`GET /health/live` 回 200 與 `{"status":"ok"}`，驗證後正常停止。
+- PR #17 第六次 run `36431017696` 四項全綠：backend 39 passed／3 opt-in skipped；Ruff 45 files；frontend 14 passed、build 22 modules；真實 MySQL integration 3 passed／0 skipped；real-stack Playwright 2 passed／0 skipped（17.2s）。
+- `browser-evidence` artifact ID `10974310555` 已下載核對 7 個 PNG，包含 healthy、q=1、q=25、十次試算後庫存不變、DB unavailable、backend unavailable 與 loading；大小 775,683 bytes，保留至 2026-10-12。
 
 ### 失敗與修正
 
@@ -415,8 +417,8 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 
 ### 風險與未完成
 
-正式 auth、訂單、扣庫存、併發、audit、匯率與 Production 部署仍明確延後。PR CI、artifact 與合併後 main 證據完成前，不宣稱 MVP 最終完成。
+正式 auth、訂單、扣庫存、併發、audit、匯率與 Production 部署仍明確延後。功能 head CI 與 artifact 已完成；證據-only commit 的 CI、一般 merge 與合併後 main 證據完成前，不宣稱 MVP 最終完成。
 
 ### 狀態與證據信心
 
-本機 component、品質門檻、backend regression 與 remote clean-clone 驗收完成；本機 browser 受系統 library 限制。PR CI 前信心 95/100，扣分是 real-stack Playwright、真實 MySQL 與最終 artifact 尚待 CI 實跑。
+本機 component、品質門檻、backend regression、remote clean-clone、PR 真實 MySQL、real-stack Playwright 與 artifact 均完成。合併前信心 99/100；扣分僅為證據-only commit 的最終 CI、一般 merge 與合併後 main CI 尚待執行。
