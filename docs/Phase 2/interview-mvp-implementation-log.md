@@ -304,6 +304,7 @@ PR-MVP-1 已建立可持久化的 Product 與 PurchaseBatch；本步在不擴充
 - 加入明確 `ROUND_HALF_UP` 邊界與 1 個商品完整顯示案例後，完整 backend：39 passed、0 failed、3 skipped、1 warning；三個 skip 均為未在本機啟用的隔離 MySQL tests。
 - Ruff：45 files lint／format passed；Alembic head 維持 `20260928_01_inventory`。
 - Frontend regression：10 passed；Oxlint、TypeScript、build 通過，21 modules；repository artifact／heuristic secret scan 通過。
+- PR CI run `36425130058`：backend 31 秒、frontend 15 秒、mysql-integration 1 分 12 秒、browser-integration 1 分 41 秒，四項全綠。MySQL job 真實執行十次 deterministic 試算、30／31 邊界、完整 row snapshot 與 table inventory，並非 skip。
 
 ### 失敗與修正
 
@@ -319,8 +320,8 @@ PR-MVP-1 已建立可持久化的 Product 與 PurchaseBatch；本步在不擴充
 
 ### 風險與未完成
 
-此 PR 不做比較 UI、正式訂單、扣庫存、auth、匯率或任何新 schema。真實 MySQL 無副作用與 browser regression 尚待 PR CI 執行。
+此 PR 不做比較 UI、正式訂單、扣庫存、auth、匯率或任何新 schema。比較畫面與完整面試流程屬下一支 PR。
 
 ### 狀態與證據信心
 
-本機 pure/service/API/regression 與品質檢查完成；CI 前信心 94/100，扣分是 MySQL snapshot test 尚未在乾淨 CI runner 執行，且最終比較 UI 屬下一支 PR。
+本機 pure/service/API/regression 與品質檢查完成，PR CI 的真實 MySQL snapshot 與 browser regression 全綠。此 PR 信心 99/100，保留 1 分是最終比較 UI 與 clean-clone 驗收屬下一支 PR 邊界。
