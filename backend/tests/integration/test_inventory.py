@@ -9,7 +9,7 @@ import pytest
 from dotenv import dotenv_values
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError
 
 from app import db
 from app.config import Settings
@@ -89,7 +89,10 @@ def test_inventory_migration_persistence_constraints_and_reconnect(monkeypatch):
                 {"original": 1, "remaining": 2, "cost": "80.000000", "currency": "CAD"},
             ]
             for row in invalid_rows:
-                with pytest.raises(IntegrityError):
+                # Drivers classify constraint failures differently. PyMySQL maps
+                # MySQL error 3819 to OperationalError, while other violations
+                # may surface as IntegrityError; both inherit from DBAPIError.
+                with pytest.raises(DBAPIError):
                     with db.get_engine().begin() as connection:
                         connection.execute(
                             text(

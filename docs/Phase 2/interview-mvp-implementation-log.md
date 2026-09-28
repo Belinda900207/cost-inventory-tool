@@ -220,6 +220,8 @@ FIFO 與加權平均都依賴批次時間、剩餘數量及精確成本；若資
 - Oxlint 指出 effect 直接呼叫 state-updating helper 可能造成 cascading render；改為外部 API Promise 完成後才更新 state，warning 消失。
 - Staged diff 審查發現 browser helper 原本只啟動 API、不套用 schema；加入受控 test DB migration，成功才啟動 Uvicorn。
 - 沙箱內 targeted pytest 在 4 個 service tests 後卡於既有 TestClient 環境限制；停止該次後在核准環境重跑 7 passed。沒有把半截輸出算成功。
+- PR #15 首輪 CI run `36382428980` 的 backend、frontend、browser-integration 通過，mysql-integration 有 1 項失敗。migration、商品與批次寫入、重連後總量 30 皆已成功；失敗發生於資料庫正確拒絕違反 constraint 的 row 時，PyMySQL 將 MySQL 3819 分類成 `OperationalError`，但測試只接受 `IntegrityError`。斷言改接 SQLAlchemy 共同基底 `DBAPIError`，仍只在資料庫確實拒絕壞資料時通過，並等待 CI 重驗。
+- 修正後 targeted Ruff lint／format 通過；完整 backend 為 24 passed、2 個未啟用 MySQL 的明確 skip、1 個既有相依套件 deprecation warning。沙箱內同樣會卡於 TestClient，因此停止後在允許 loopback 的環境重跑，未將中止程序列為成功。
 
 ### 我在面試時可以怎麼解釋
 
@@ -233,4 +235,4 @@ FIFO 與加權平均都依賴批次時間、剩餘數量及精確成本；若資
 
 ### 狀態與證據信心
 
-本機 unit/API/component/品質檢查完成；真實 MySQL 與 CI 尚待執行。現階段信心 90/100，主要扣分是 migration 與 constraints 尚未在乾淨 MySQL 8.4 runner 實跑。
+本機 unit/API/component/品質檢查完成；乾淨 MySQL 8.4 已證明 migration、持久化與 constraint 生效，但修正測試例外分類後仍待 CI 重跑。現階段信心 94/100，主要扣分是修正後完整 CI 證據尚未產生。
