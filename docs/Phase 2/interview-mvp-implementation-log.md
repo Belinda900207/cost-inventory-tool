@@ -400,6 +400,7 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 - 首次 clean-clone smoke 使用了相對於 repository root 的 virtualenv 路徑，但當時工作目錄已在 `backend/`，因此命令以 127 結束；修正為 `.venv/bin/uvicorn` 後服務成功啟動。第一次跨 sandbox probe 亦因網路 namespace 隔離無法連線，改在同一受控程序啟動、probe、停止後取得 200。兩次都屬執行環境／命令問題，不是應用測試通過。
 - PR #17 初次 CI run `36427767542` 的 backend、frontend、mysql-integration 通過，browser-integration 在 180 秒 timeout 失敗；artifact 的 page snapshot 停在商品已建立但庫存仍為 0，並非完整流程通過。
 - 原 UI 在建立成功 API 後、refresh 尚未完成前就先顯示成功訊息，E2E 可能在共用 `busy` 尚未解除時開始下一個 submit。修正為 refresh 完成後才公布成功，並讓 Playwright 在每次建立前確認按鈕 enabled、明確等待且驗證 POST 回 201；此判斷須由下一次 CI 實跑確認。
+- 第二次 CI run `36428650823` 仍在相同 page state 達到 180 秒 timeout，故上一項 race 只是改善點、不是已確認根因。下一輪把單次 POST 等待上限縮至 15 秒、送出前檢查原生 form validity，並繼承只含 request lifecycle 的 backend log；若仍失敗，CI 必須能區分未送 request 與後端未回 response。
 
 ### 我在面試時可以怎麼解釋
 
