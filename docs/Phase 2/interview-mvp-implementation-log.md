@@ -404,6 +404,7 @@ PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API
 - 第三次 CI run `36429446385` 的 lifecycle log 證明 product POST 201 與 products／inventory refresh 均快速完成，之後沒有任何 purchase-batches request；問題已排除 backend／MySQL，縮至兩個 controlled selects 與第一個批次欄位之間。移除對已自動選中值的冗餘 `selectOption`，改以 product response ID 驗證兩個 select，並設定全域 15 秒 action timeout，避免單一步驟再次耗盡整體 180 秒。
 - 首次加入 action timeout 時放在 Playwright config 根層，TypeScript 立即以 TS2769 拒絕未知欄位；依 Playwright 型別移入 `use.actionTimeout` 後再重跑完整前端閘門。
 - 第四次 CI run `36430161546` 在 22.8 秒內給出明確 stack：`getByLabel('商品', { exact: true })` 找不到 element。該 label 包住 select 與 options，Playwright 的 label text 精確匹配不等於 combobox accessible name；這也確認先前三次的長等待根因。改用 `getByRole('combobox', { name: '商品', exact: true })`，仍以可及名稱定位且不依賴 CSS 結構。
+- 第五次 CI run `36430566144` 已由真實 browser 完成商品、20×80、10×100 與 q=1 API 200；失敗是 strict selector 找到兩個 `CAD 80.00`。q=1 時 FIFO 的單位／總成本同為 80.00，加權平均亦各有兩個 86.67，因此改為精確斷言各值 count=2，不把正確重複值誤判成單元素。
 
 ### 我在面試時可以怎麼解釋
 

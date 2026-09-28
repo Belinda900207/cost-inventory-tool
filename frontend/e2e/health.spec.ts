@@ -92,8 +92,8 @@ test.describe('real stack', () => {
     await page.getByRole('button', { name: '比較成本' }).click()
     const comparison = page.getByRole('region', { name: '客觀成本比較' })
     await expect(comparison.getByRole('heading', { name: 'FIFO' })).toBeVisible()
-    await expect(comparison.getByText('CAD 80.00')).toBeVisible()
-    await expect(comparison.getByText('CAD 86.67')).toBeVisible()
+    await expect(comparison.getByText('CAD 80.00', { exact: true })).toHaveCount(2)
+    await expect(comparison.getByText('CAD 86.67', { exact: true })).toHaveCount(2)
     await expect(comparison.getByText('本次試算未扣除庫存。')).toBeVisible()
     await page.screenshot({ path: testInfo.outputPath('cost-comparison-1.png'), fullPage: true })
 
