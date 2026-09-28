@@ -325,3 +325,86 @@ PR-MVP-1 已建立可持久化的 Product 與 PurchaseBatch；本步在不擴充
 ### 狀態與證據信心
 
 本機 pure/service/API/regression 與品質檢查完成，PR CI 的真實 MySQL snapshot 與 browser regression 全綠。此 PR 信心 99/100，保留 1 分是最終比較 UI 與 clean-clone 驗收屬下一支 PR 邊界。
+
+合併補充：PR #16 以一般 merge commit `8c39cf676507cfe7531c18033313e15ee8b67fa9` 進入 `main`，所有分支保留；合併後 main run `36425691886` 四項全綠。PR-MVP-2 完成。
+
+## Step MVP-04：比較畫面與最終驗證
+
+### 這一步在做什麼
+
+像替已驗證的兩台成本計算器裝上同一個操作台：使用者從網頁建立商品與兩批進貨，輸入成交條件後並排看結果，再回頭確認貨架數量完全沒變。
+
+### 專業意義
+
+本步完成 browser-to-database 垂直切片，將 loading、validation、domain error 與 infrastructure error 分開呈現；Playwright 使用真實 API/MySQL，不以硬編碼畫面或 mock 取代整合證據。
+
+### 為什麼現在做
+
+PR-MVP-1 已提供持久化庫存，PR-MVP-2 已提供 pure engine 與唯讀 API。最後才接 UI，可讓本 PR 專注互動、可及性、端到端流程與交付證據，不重新改動公式或 schema。
+
+### 執行前狀態
+
+- 分支：`feat/interview-cost-comparison-ui`。
+- 起點：乾淨且同步的 `main` commit `8c39cf6`。
+- PR #16 已一般 merge；合併後 main CI run `36425691886` 四項全綠。
+- 本機 Docker Desktop daemon 未啟動；Chromium 已下載但缺 `libnspr4.so` 系統 library。
+
+### 計畫
+
+- 先寫 component 與 Playwright 驗收，固定五種 UI 狀態及完整 golden flow。
+- 擴充 typed API client，新增試算表單與 FIFO／加權平均等權比較元件。
+- 補 README demo、最終 verification、3～5 分鐘 demo script、追問回答與核心概念。
+- commit/push 後在全新 `/tmp` remote clone 執行可行的 clean-clone 安裝、測試、build 與啟動 smoke。
+- 由 PR CI 真實執行 MySQL、migration 與已安裝系統依賴的 Playwright，保存 screenshot artifact。
+
+### 實際修改
+
+- `frontend/src/features/inventory/api.ts`：加入 simulation request/response types、安全 error code/details parser 與試算呼叫；不顯示 server message 或內部 detail。
+- `CostComparison.tsx`：兩個相同結構的 method cards，顯示單位／總成本、營收、毛利、毛利率、客觀差額、免責與未扣庫存聲明。
+- `InventoryPanel.tsx`：共用既有商品選擇，加入 client validation、loading、成功、庫存不足與一般失敗狀態。
+- `inventory.css`：桌面雙欄、窄螢幕單欄、清楚 focus 與等權卡片；沒有推薦 badge 或自動選取。
+- component tests：驗證五種狀態、字串金額、差額方向、免責、不推薦及試算不重新載入／改動庫存。
+- Playwright：從 UI 建商品與兩批，跑 1／25／31、連續十次 25，最後由 API 重新讀 MySQL-backed inventory 為 30 與 20／10，並截圖。
+- README、verification 與 demo script：記錄操作、證據、限制、3～5 分鐘講法、常見追問及十個核心概念。
+
+### 資料庫 migration
+
+無。UI 與驗證不改 schema；Alembic head 必須維持 `20260928_01_inventory`。
+
+### 執行指令
+
+- Targeted Vitest 先紅後綠；再執行 Oxlint、TypeScript、完整 Vitest、production build。
+- Backend regression 執行 Ruff lint／format、完整 pytest 與 Alembic heads。
+- Playwright 本機先在沙箱嘗試，再於允許 loopback 的環境重跑；真實 MySQL case未設旗標時明確 skip。
+- 功能 push 後再執行 clean clone；PR CI 執行全部四個 jobs 並上傳 `browser-evidence`。
+
+### 驗證結果
+
+- 預期紅燈：InventoryPanel targeted 7 tests 中 3 passed、4 failed；缺少 simulation API、表單、比較結果與狀態處理。
+- 實作後 targeted 最終 7 passed、0 failed。
+- Frontend 完整：14 passed、0 failed；Oxlint、TypeScript、production build 通過，22 modules；repository artifact／heuristic secret scan 通過。
+- Backend regression：39 passed、0 failed、3 skipped、1 warning；skip 是未啟用的 MySQL integration，warning 是既有 Starlette/httpx deprecation。
+- Ruff 45 files 通過；Alembic head 仍為 `20260928_01_inventory`。
+- 本機 Playwright：首次沙箱內 Vite 無法啟動；允許 loopback 後 real-stack 1 skipped，另一案例因本機缺 `libnspr4.so` 1 failed。未稱為通過，待 CI 安裝 dependencies 後重驗。
+
+### 失敗與修正
+
+- 新增第二個商品下拉後，舊測試用 option 名稱查詢變成不唯一；改以「試算商品」label 等待受控 select 值，測試與使用者操作邊界一致。
+- Vitest auto-mock 讓 `instanceof ApiRequestError` 不能可靠代表跨邊界錯誤；UI 改用只接受 string code 與安全 numeric details 的結構判斷，未知錯誤仍顯示泛化訊息。
+- TypeScript `erasableSyntaxOnly` 拒絕 constructor parameter properties；改成明確 readonly fields 與 assignments。
+- 本機 Playwright 缺 Chromium runtime `libnspr4.so`；沒有擅自安裝系統套件或把 real-stack skip 冒稱通過，交由既有 CI `playwright install --with-deps` 驗證。
+
+### 我在面試時可以怎麼解釋
+
+- UI 不計算金額，只顯示 API 的字串結果，避免前後端各自實作公式。
+- FIFO 與加權平均使用相同結構、相同視覺層級；差額說明方向但不做政策推薦。
+- 使用者錯誤、庫存不足與後端故障分開處理，同時不把內部錯誤文字顯示到畫面。
+- Playwright 不是只看靜態畫面，它建立真實 MySQL 資料並在十次試算後重新讀取庫存。
+
+### 風險與未完成
+
+正式 auth、訂單、扣庫存、併發、audit、匯率與 Production 部署仍明確延後。PR CI、artifact、clean clone 與合併後 main 證據完成前，不宣稱 MVP 最終完成。
+
+### 狀態與證據信心
+
+本機 component、品質門檻與 backend regression 完成；本機 browser 受系統 library 限制。CI 前信心 92/100，扣分是 real-stack Playwright、clean clone 與最終 CI 尚待實跑。

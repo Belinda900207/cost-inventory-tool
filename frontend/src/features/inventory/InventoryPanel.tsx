@@ -4,10 +4,28 @@ import {
   createPurchaseBatch,
   listInventory,
   listProducts,
+  simulateCost,
+  type CostSimulation,
   type InventoryItem,
   type Product,
 } from './api'
+import CostComparison from './CostComparison'
 import './inventory.css'
+
+function safeApiError(error: unknown) {
+  if (!error || typeof error !== 'object' || !('code' in error) ||
+    typeof error.code !== 'string') return null
+  const rawDetails = 'details' in error && error.details && typeof error.details === 'object'
+    ? error.details as Record<string, unknown>
+    : {}
+  return {
+    code: error.code,
+    details: {
+      requested: typeof rawDetails.requested === 'number' ? rawDetails.requested : '?',
+      available: typeof rawDetails.available === 'number' ? rawDetails.available : '?',
+    },
+  }
+}
 
 export default function InventoryPanel() {
   const [products, setProducts] = useState<Product[]>([])
@@ -20,6 +38,11 @@ export default function InventoryPanel() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [failed, setFailed] = useState(false)
+  const [simulationQuantity, setSimulationQuantity] = useState('')
+  const [sellingUnitPrice, setSellingUnitPrice] = useState('')
+  const [simulationBusy, setSimulationBusy] = useState(false)
+  const [simulationError, setSimulationError] = useState('')
+  const [simulation, setSimulation] = useState<CostSimulation | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -87,6 +110,45 @@ export default function InventoryPanel() {
     }
   }
 
+  async function submitSimulation(event: FormEvent) {
+    event.preventDefault()
+    const parsedQuantity = Number(simulationQuantity)
+    const parsedPrice = Number(sellingUnitPrice)
+    setSimulationError('')
+    setSimulation(null)
+    if (!selectedProduct) {
+      setSimulationError('請先建立並選擇商品。')
+      return
+    }
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0 ||
+      !Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      setSimulationError('請輸入正整數數量與大於零的 CAD 成交單價。')
+      return
+    }
+    setSimulationBusy(true)
+    try {
+      setSimulation(await simulateCost({
+        product_id: Number(selectedProduct),
+        quantity: parsedQuantity,
+        selling_unit_price: sellingUnitPrice,
+        currency: 'CAD',
+      }))
+    } catch (error) {
+      const requestError = safeApiError(error)
+      if (requestError?.code === 'insufficient_inventory') {
+        setSimulationError(
+          `庫存不足：需要 ${requestError.details.requested}，目前可用 ${requestError.details.available}。`,
+        )
+      } else if (requestError?.code === 'validation_error') {
+        setSimulationError('請輸入正整數數量與大於零的 CAD 成交單價。')
+      } else {
+        setSimulationError('試算失敗；請確認後端與資料庫狀態後重試。')
+      }
+    } finally {
+      setSimulationBusy(false)
+    }
+  }
+
   return (
     <section className="inventory-panel" aria-labelledby="inventory-title">
       <h2 id="inventory-title">商品與庫存</h2>
@@ -129,6 +191,25 @@ export default function InventoryPanel() {
           </article>
         ))}
       </div>
+
+      <form className="simulation-form" onSubmit={(event) => void submitSimulation(event)}>
+        <h3>成本試算</h3>
+        <p>輸入成交條件，同時查看 FIFO 與數量加權平均。試算不會扣除庫存。</p>
+        <div className="simulation-inputs">
+          <label>試算商品<select required value={selectedProduct} onChange={(event) => setSelectedProduct(event.target.value)}>
+            <option value="">請選擇</option>
+            {products.map((product) => <option key={product.product_id} value={product.product_id}>{product.name}</option>)}
+          </select></label>
+          <label>試算數量<input required min="1" step="1" type="number" value={simulationQuantity} onChange={(event) => setSimulationQuantity(event.target.value)} /></label>
+          <label>CAD 成交單價<input required min="0.000001" step="0.000001" inputMode="decimal" type="number" value={sellingUnitPrice} onChange={(event) => setSellingUnitPrice(event.target.value)} /></label>
+        </div>
+        <button disabled={simulationBusy || products.length === 0}>
+          {simulationBusy ? '試算中…' : '比較成本'}
+        </button>
+        {simulationError && <p role="alert">{simulationError}</p>}
+      </form>
+
+      {simulation && <CostComparison result={simulation} />}
     </section>
   )
 }
