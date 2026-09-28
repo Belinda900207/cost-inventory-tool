@@ -1,6 +1,8 @@
 # 成本與庫存工具
 
-第一階段工程骨架：React + TypeScript + Vite 狀態頁、FastAPI 健康檢查、MySQL 8.4、SQLAlchemy 2、Alembic、隔離整合測試與 GitHub Actions。
+第一階段工程骨架：React + TypeScript + Vite 狀態頁、FastAPI 健康檢查、MySQL 8.4、SQLAlchemy 2、Alembic、隔離整合測試與 GitHub Actions。第二階段正在加入供受控面試展示使用的成本與庫存試算 MVP。
+
+> **安全邊界：**正式驗證與授權尚未實作，本版本只能用於本機及受控展示，不可直接公開部署。
 
 目前沒有商品、進貨、匯率、庫存、成本、訂單或正式登入功能，也沒有業務資料表。Auth 只保留介面；`login`／`me` 尚未上線。
 
@@ -126,10 +128,20 @@ GitHub Actions 對 PR 與 `main` 執行 backend、frontend、mysql-integration�
 
 ## 文件
 
-- [架構](docs/architecture.md)
-- [決策紀錄](docs/decisions.md)
-- [開發與 PR 流程](docs/development-workflow.md)
-- [Human-in-the-loop AI 流程](docs/ai-workflow.md)
-- [第一階段驗收](docs/stage-1-verification.md)
-- [逐步實作紀錄](docs/stage-1-implementation-log.md)
-- [Auth 待決策邊界](docs/auth-contract.md)
+### 第一階段
+
+- [架構](docs/Phase%201/architecture.md)
+- [決策紀錄](docs/Phase%201/decisions.md)
+- [開發與 PR 流程](docs/Phase%201/development-workflow.md)
+- [Human-in-the-loop AI 流程](docs/Phase%201/ai-workflow.md)
+- [第一階段驗收](docs/Phase%201/stage-1-verification.md)
+- [逐步實作紀錄](docs/Phase%201/stage-1-implementation-log.md)
+- [Auth 待決策邊界](docs/Phase%201/auth-contract.md)
+
+### 第二階段：三天面試 MVP
+
+- [MVP 需求與追溯](docs/Phase%202/interview-mvp-requirements.md)
+- [領域模型](docs/Phase%202/interview-mvp-domain-model.md)
+- [API 合約](docs/Phase%202/interview-mvp-api-contract.md)
+- [MVP-only 決策](docs/Phase%202/interview-mvp-decisions.md)
+- [施工紀錄](docs/Phase%202/interview-mvp-implementation-log.md)
