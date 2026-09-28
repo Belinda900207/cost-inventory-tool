@@ -11,7 +11,7 @@
 | MVP-D005 | 只接受 CAD，匯率固定 1，不呼叫外部 API | 聚焦成本算法，避免把未批准 provider 當正式方案 | 非 CAD 與歷史匯率鎖定延後 |
 | MVP-D006 | 試算完全不持久化 | 最直接證明試算無副作用 | 無 simulation table、history 或 order |
 | MVP-D007 | FIFO 次序為 `purchased_at ASC, batch_id ASC` | 同時刻仍 deterministic | 正式扣庫存及 row locking 延後 |
-| MVP-D008 | 商品保存 display name 與唯一 normalized name | 同時支援原顯示及不分大小寫防重 | Unicode normalization 細節由 PR-MVP-1 測試固定 |
+| MVP-D008 | 商品保存 trim 後 display name，唯一 normalized name 使用 Unicode NFKC＋`casefold()` | 同時支援原顯示及不分大小寫防重 | DB unique constraint 是併發下的最後防線 |
 | MVP-D009 | 差額以絕對值＋`higher_method` 表達 | 避免 signed difference 被誤讀為推薦 | 不顯示「較佳」「推薦」或預設選取 |
 | MVP-D010 | PurchaseBatch 是庫存事實來源，MVP 無 aggregate stock 欄位 | 避免兩份庫存資料失同步 | 查詢成本可在正式規模後再評估 read model |
 | MVP-D011 | 所有 schema 只由 Alembic 管理 | 可重建、可審查、可在真實 MySQL 驗證 | 禁止 `create_all()` 代替 migration |

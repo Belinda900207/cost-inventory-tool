@@ -1,0 +1,12 @@
+.inventory-panel { margin-top: 2rem; }
+.inventory-panel h2 { margin-bottom: .25rem; }
+.inventory-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.inventory-forms form, .inventory-list article { border: 1px solid #cbd5df; border-radius: 8px; background: white; padding: 1rem; }
+.inventory-forms label { display: grid; gap: .25rem; margin-bottom: .75rem; font-weight: 600; }
+.inventory-forms input, .inventory-forms select { width: 100%; padding: .55rem; border: 1px solid #8a9aaa; border-radius: 4px; font: inherit; }
+.inventory-list { display: grid; gap: 1rem; margin-top: 1rem; }
+.inventory-list header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.inventory-list h3 { margin: 0; }
+.inventory-list ul { list-style: none; padding: 0; margin: .75rem 0 0; }
+.inventory-list li { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; padding: .6rem 0; border-top: 1px solid #e2e8ee; }
+@media (max-width: 620px) { .inventory-list li { grid-template-columns: 1fr; } }

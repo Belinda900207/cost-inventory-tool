@@ -1,9 +1,9 @@
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from functools import lru_cache
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Session
 
 from app.config import get_settings
 
@@ -26,6 +26,7 @@ def get_engine() -> Engine:
             "connect_timeout": settings.database_timeout,
             "read_timeout": settings.database_timeout,
             "write_timeout": settings.database_timeout,
+            "init_command": "SET time_zone = '+00:00'",
         },
     )
 
@@ -37,3 +38,8 @@ def check_database() -> None:
 
 def get_database_check() -> DatabaseCheck:
     return check_database
+
+
+def get_session() -> Generator[Session]:
+    with Session(get_engine(), expire_on_commit=False) as session:
+        yield session

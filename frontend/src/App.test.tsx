@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import App from './App'
 
+vi.mock('./features/inventory/InventoryPanel', () => ({ default: () => null }))
+
 function reply(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'X-Request-ID': 'test-trace' } })
 }

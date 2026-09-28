@@ -8,6 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import get_settings
 from app.db import Base, get_engine
+from app.inventory import models as inventory_models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:

@@ -30,7 +30,7 @@ erDiagram
 ## Product
 
 - `name` 保存 trim 後的顯示名稱。
-- `normalized_name` 是用於不分大小寫唯一性的應用正規化值；確切 Unicode 正規化方法在 PR-MVP-1 以測試固定。
+- `normalized_name` 使用 Unicode NFKC 後 `casefold()`，作為不分大小寫唯一性的應用正規化值。
 - 應用層先回可理解的衝突錯誤，資料庫 unique constraint 是併發下的最後防線。
 - MVP 不提供 rename、disable 或 delete。
 
