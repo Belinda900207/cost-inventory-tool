@@ -88,8 +88,9 @@ docker compose stop
 | `POST /api/v1/purchase-batches` | 新增正整數數量、`DECIMAL(19,6)` CAD 成本的進貨批次 |
 | `GET /api/v1/inventory` | 查詢全部商品總庫存與批次 |
 | `GET /api/v1/inventory/{product_id}` | 查詢單一商品庫存與批次 |
+| `POST /api/v1/simulations/cost` | 同時試算 FIFO 與數量加權平均；不保存、不扣庫存 |
 
-目前沒有商品改名、刪除、正式訂單或扣庫存；批次剩餘數量建立後不會因本階段操作改變。
+目前沒有商品改名、刪除、正式訂單或扣庫存；試算只回傳客觀比較，不推薦成本法，且不會改變批次剩餘數量。
 
 ## 驗證
 

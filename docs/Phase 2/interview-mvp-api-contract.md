@@ -121,7 +121,7 @@ Request：
 }
 ```
 
-`difference` 使用絕對差額並明列較高的一方，避免正負號歧義；它不是推薦欄位。
+`difference` 使用絕對差額並明列較高的一方，避免正負號歧義；兩者相同時為 `equal`。它不是推薦欄位。
 
 商品不存在回 `404 product_not_found`。總可用量不足回 `409 insufficient_inventory`，錯誤 details 只可包含安全的 requested/available 整數，不回 SQL 或內部例外。任何失敗都不得修改資料。
 
